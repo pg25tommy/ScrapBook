@@ -1,26 +1,105 @@
-@import "tailwindcss";
+/* src/app/globals.css */
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* ---------------- Base / Reset ---------------- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html, body {
+  height: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  margin: 0;
+
+  /* Flat cream fallback */
+  background-color: #F3EDE0;
+
+  /* Layer 1: tiled paper texture across the whole screen
+     Layer 2: faint gradient overlay for depth */
+  background-image:
+    url('/textures/paper.png'),
+    linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(243,237,224,0.15) 100%);
+
+  background-repeat: repeat, no-repeat;     /* texture repeats everywhere */
+  background-size: auto, cover;             /* tile texture, gradient covers screen */
+  background-position: top left, center;    /* texture anchored top-left */
+  background-attachment: fixed, fixed;      /* both stay put when scrolling/panning */
+
+  color: #1a1a1a;
+  font-family: ui-rounded, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial,
+               "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  /* Reduce accidental text selection while dragging */
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  user-select: none;
 }
+
+/* Accessibility: visible, tidy focus */
+:focus { outline: none; }
+:focus-visible {
+  outline: 2px solid #6a8fe6;
+  outline-offset: 2px;
+}
+
+/* ---------------- Utilities ---------------- */
+
+/* Remove any old gradient helpers */
+.paper-bg { background: #F3EDE0 !important; }
+.top-band { background: #F3EDE0 !important; }
+
+/* Hide scrollbars where we want clean edges */
+.no-scrollbars::-webkit-scrollbar { display: none; }
+.no-scrollbars { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Promote an element to GPU layer */
+.gpu-layer { transform: translateZ(0); will-change: transform; }
+
+/* ---------------- UI Elements ---------------- */
+
+/* Toolbar & buttons */
+.toolbar-btn {
+  appearance: none;
+  border: 0;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: saturate(120%) blur(4px);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  color: #222;
+  font-size: 12px;
+  line-height: 1;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: box-shadow 120ms ease, transform 80ms ease, background 120ms ease;
+}
+
+.toolbar-btn:hover {
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.12);
+}
+
+.toolbar-btn:active {
+  transform: translateY(1px);
+}
+
+/* Small shadow utility (used for bottom hint) */
+.shadow {
+  box-shadow: 0 2px 10px rgba(0,0,0,0.10);
+}
+
+/* ---------------- Pixi Canvas Hygiene ---------------- */
+
+/* Ensure Pixi’s canvas doesn’t overwrite background */
+canvas {
+  display: block;
+  margin: 0;
+  padding: 0;
+  background: transparent; /* let paper texture show through */
+}
+
+canvas:focus { outline: none; }
