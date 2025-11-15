@@ -1,10 +1,12 @@
-// Next.js page that hosts the LightTable
-import LightTableApp from './components/LightTableApp';
+import { getPublishedPages } from '@/lib/db';
+import PublicGallery from './components/PublicGallery';
 
-export default function Page() {
-  return (
-    <main className="min-h-screen p-6">
-      <LightTableApp />
-    </main>
-  );
+// Disable caching for this page
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
+export default async function HomePage() {
+  const pages = await getPublishedPages();
+
+  return <PublicGallery pages={pages} />;
 }
