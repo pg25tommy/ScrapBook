@@ -1,20 +1,163 @@
 # Light Table — Technical Specification
-version: 0.4.1
-date: 2025-11-14
-status: Alignment in Progress + NEW Flip Feature Added
+version: 0.5.0
+date: 2025-11-15
+status: Production-Ready Admin/Public Architecture
+
+---
+
+## ⚠️ IMPORTANT: Read This First
+
+### For AI Assistants (Claude, GPT, etc.)
+
+**BEFORE starting any new feature development or making significant changes:**
+
+1. **MUST READ** all documentation files in this order:
+   - `README.md` - Project overview, setup, and usage
+   - `SPEC.md` (this file) - Technical specification and architecture
+   - `SETUP.md` - Configuration and setup guide
+   - `CHANGELOG.md` - Complete history of changes and rationale
+
+2. **UNDERSTAND** the existing architecture:
+   - Admin/public separation pattern
+   - Authentication flow with NextAuth.js
+   - Database layer (in-memory + Postgres)
+   - API endpoint structure
+   - Component hierarchy
+
+3. **ASK QUESTIONS** before proceeding if:
+   - Feature conflicts with existing architecture
+   - Implementation approach is unclear
+   - User requirements are ambiguous
+   - Breaking changes are necessary
+
+4. **FOLLOW** established patterns:
+   - Use existing authentication patterns
+   - Follow API naming conventions (`/api/admin/*` vs `/api/public/*`)
+   - Maintain separation of concerns
+   - Keep admin and public components separate
+
+### Why This Matters
+
+Reading all documentation ensures:
+- ✅ No duplicate implementations
+- ✅ Consistent architecture
+- ✅ Understanding of past decisions
+- ✅ Awareness of known issues
+- ✅ Proper context for new features
+
+**Example**: If you're asked to "add user management," first read:
+- `CHANGELOG.md` to see authentication implementation
+- `SPEC.md` to understand current auth architecture
+- `README.md` to see how authentication is used
+- `SETUP.md` to understand credential management
+
+This prevents accidentally breaking NextAuth.js integration or duplicating existing user management.
+
+---
+
+## System Architecture (v0.5.0)
+
+### Admin/Public Separation
+
+The application is divided into two distinct user experiences:
+
+**Admin Interface (`/admin`)**
+- Authentication required (NextAuth.js)
+- Full CRUD operations on scrapbook pages
+- Publish/unpublish workflow
+- Complete Light Table editor access
+- **Routes**: `/admin`, `/admin/login`, `/admin/pages/*`
+- **API**: `/api/admin/pages/*` (protected)
+
+**Public Interface (`/`)**
+- No authentication required
+- Read-only access to published pages
+- Gallery view + individual page viewer
+- Full zoom/pan functionality
+- **Routes**: `/`, `/view/[slug]`
+- **API**: `/api/public/pages/*` (open)
+
+### Authentication Flow
+
+```
+User visits /admin
+  ↓
+Redirects to /admin/login (if not authenticated)
+  ↓
+User enters credentials
+  ↓
+NextAuth validates against env vars
+  ↓
+Bcrypt compares password hash
+  ↓
+Session created (JWT, 30 days)
+  ↓
+Redirect to /admin dashboard
+  ↓
+All admin API calls include session
+```
+
+### Database Architecture
+
+**Dual-Mode Storage:**
+
+```typescript
+// Development: In-memory (globalThis)
+const inMemoryPages = globalThis.inMemoryPages ?? new Map();
+
+// Production: Vercel Postgres
+const { rows } = await sql`SELECT * FROM pages`;
+```
+
+**Auto-detection:** Checks for `POSTGRES_URL` environment variable
+
+### Data Model
+
+```typescript
+interface ScrapbookPage {
+  id: number;                    // Auto-increment
+  title: string;                 // Display name
+  slug: string;                  // URL-friendly identifier
+  slot_data: Slot;               // Complete Light Table state
+  published: boolean;            // Visibility control
+  created_at: string;            // ISO timestamp
+  updated_at: string;            // ISO timestamp
+}
+
+interface Slot {
+  id: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  rotation: number;
+  scale: number;
+  content?: SlotContent;
+  backText?: string;             // Text on photo back
+}
+```
+
+---
 
 ## Current State vs Goals Analysis
 
-### ✅ Aligned Features
-- **Zoom & Pan**: Mouse wheel zoom and click-drag panning work smoothly
-- **Paper Background**: Warm, cream-textured background implemented
-- **CORS Proxy**: `/api/proxy` route handles external images correctly
-- **Tape Overlays**: SVG tape pieces rendered on top layer (not masked)
-- **Toolbar**: Persistent toolbar with controls
-- **PixiJS Integration**: High-performance 2D rendering with PixiJS 8.x
-- **TypeScript**: Full type safety throughout codebase
-- **API Endpoint**: `/api/page` provides image URLs
-- **Photo Flip**: ✅ NEW - Flip photo to add text on back (newspaper clipping style)
+### ✅ Aligned Features (v0.5.0)
+- **Admin/Public Architecture**: ✅ Complete separation with authentication
+- **Authentication**: ✅ NextAuth.js with bcrypt password hashing
+- **Database Layer**: ✅ Dual-mode (in-memory + Postgres)
+- **CRUD Operations**: ✅ Full create/read/update/delete for pages
+- **Publish Workflow**: ✅ Toggle published/unpublished status
+- **Zoom & Pan**: ✅ Mouse wheel zoom and click-drag panning work smoothly
+- **Paper Background**: ✅ Warm, cream-textured background implemented
+- **CORS Proxy**: ✅ `/api/proxy` route handles external images correctly
+- **Tape Overlays**: ✅ SVG tape pieces rendered on top layer (not masked)
+- **Toolbar**: ✅ Persistent toolbar with controls
+- **PixiJS Integration**: ✅ High-performance 2D rendering with PixiJS 8.x
+- **TypeScript**: ✅ Full type safety throughout codebase
+- **API Endpoints**: ✅ Admin and public APIs
+- **Photo Flip**: ✅ Flip photo to add text on back (newspaper clipping style)
+- **Public Gallery**: ✅ Grid view of published pages
+- **Page Viewer**: ✅ Read-only full-screen scrapbook view
 
 ### ❌ Misaligned Features (Need Removal)
 - **Multiple Slots**: Current implementation supports multiple photo frames, spec calls for single Polaroid
