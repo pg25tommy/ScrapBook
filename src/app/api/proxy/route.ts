@@ -2,8 +2,8 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 
-export const runtime = 'nodejs' as const;
-export const dynamic = 'force-dynamic' as const;
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 const ALLOWED_HOSTS = new Set<string>([
   'images.unsplash.com',

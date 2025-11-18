@@ -3,7 +3,7 @@ import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
 import { requireAuth } from '@/lib/auth';
 
-export const runtime = 'nodejs' as const;
+export const runtime = 'nodejs';
 
 export async function POST(req: NextRequest) {
   // Require authentication
