@@ -7,10 +7,11 @@ import { getPublishedPageBySlug } from '@/lib/db';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { slug: string } }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
-    const page = await getPublishedPageBySlug(params.slug);
+    const { slug } = await params;
+    const page = await getPublishedPageBySlug(slug);
 
     if (!page) {
       return NextResponse.json(
