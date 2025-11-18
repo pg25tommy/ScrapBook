@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { writeFile, mkdir } from 'fs/promises';
-import path from 'path';
+import { put } from '@vercel/blob';
 import { requireAuth } from '@/lib/auth';
 
 export const runtime = 'nodejs';
@@ -41,38 +40,27 @@ export async function POST(req: NextRequest) {
 
     // Generate unique filename
     const timestamp = Date.now();
-    const ext = path.extname(file.name);
+    const ext = file.name.split('.').pop() || 'jpg';
     const safeName = file.name
-      .replace(ext, '')
+      .replace(`.${ext}`, '')
       .replace(/[^a-z0-9]/gi, '-')
       .toLowerCase();
-    const filename = `${safeName}-${timestamp}${ext}`;
+    const filename = `${safeName}-${timestamp}.${ext}`;
 
-    // Ensure photos directory exists
-    const photosDir = path.join(process.cwd(), 'public', 'photos');
-    try {
-      await mkdir(photosDir, { recursive: true });
-    } catch (err) {
-      // Directory might already exist, ignore error
-    }
+    // Upload to Vercel Blob
+    const blob = await put(filename, file, {
+      access: 'public',
+      addRandomSuffix: false,
+    });
 
-    // Save file
-    const filepath = path.join(photosDir, filename);
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-    await writeFile(filepath, buffer);
-
-    // Return the URL (relative to public directory)
-    const { origin } = new URL(req.url);
-    const imageUrl = `${origin}/photos/${encodeURIComponent(filename)}`;
-
+    // Return the blob URL
     return NextResponse.json({
       success: true,
-      url: imageUrl,
+      url: blob.url,
       filename,
       slot: {
         kind: 'image',
-        src: imageUrl,
+        src: blob.url,
         fit: 'cover',
       },
     });

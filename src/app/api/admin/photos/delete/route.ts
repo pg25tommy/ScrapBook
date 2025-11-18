@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { unlink, readdir } from 'fs/promises';
-import path from 'path';
+import { del, list } from '@vercel/blob';
 import { requireAuth } from '@/lib/auth';
 
 export const runtime = 'nodejs';
@@ -17,25 +16,24 @@ export async function DELETE(req: NextRequest) {
 
   try {
     const { searchParams } = new URL(req.url);
-    const filename = searchParams.get('filename');
+    const blobUrl = searchParams.get('url'); // Now expecting full blob URL
     const deleteAll = searchParams.get('all') === 'true';
 
-    const photosDir = path.join(process.cwd(), 'public', 'photos');
-
     if (deleteAll) {
-      // Delete all photos
-      const files = await readdir(photosDir);
+      // Delete all photos from blob storage
+      const { blobs } = await list();
       let deletedCount = 0;
 
-      for (const file of files) {
-        if (!exts.has(path.extname(file).toLowerCase())) continue;
+      for (const blob of blobs) {
+        // Check if it's an image file
+        const ext = blob.pathname.split('.').pop()?.toLowerCase();
+        if (!ext || !exts.has(`.${ext}`)) continue;
 
-        const filepath = path.join(photosDir, file);
         try {
-          await unlink(filepath);
+          await del(blob.url);
           deletedCount++;
         } catch (err) {
-          console.error(`Failed to delete ${file}:`, err);
+          console.error(`Failed to delete ${blob.pathname}:`, err);
         }
       }
 
@@ -44,27 +42,29 @@ export async function DELETE(req: NextRequest) {
         message: `Deleted ${deletedCount} photo(s)`,
         deletedCount,
       });
-    } else if (filename) {
-      // Delete specific file
-      const filepath = path.join(photosDir, filename);
-
-      // Security check: ensure filename doesn't contain path traversal
-      if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+    } else if (blobUrl) {
+      // Delete specific blob
+      // Security check: ensure it's a valid blob URL
+      if (!blobUrl.includes('blob.vercel-storage.com')) {
         return NextResponse.json(
-          { error: 'Invalid filename' },
+          { error: 'Invalid blob URL' },
           { status: 400 }
         );
       }
 
+      // Extract filename from URL for validation
+      const filename = blobUrl.split('/').pop() || '';
+      const ext = filename.split('.').pop()?.toLowerCase();
+
       // Verify file has valid image extension
-      if (!exts.has(path.extname(filename).toLowerCase())) {
+      if (!ext || !exts.has(`.${ext}`)) {
         return NextResponse.json(
           { error: 'Invalid file type' },
           { status: 400 }
         );
       }
 
-      await unlink(filepath);
+      await del(blobUrl);
 
       return NextResponse.json({
         success: true,
@@ -73,15 +73,15 @@ export async function DELETE(req: NextRequest) {
       });
     } else {
       return NextResponse.json(
-        { error: 'Must specify filename or all=true' },
+        { error: 'Must specify url or all=true' },
         { status: 400 }
       );
     }
   } catch (error: any) {
     console.error('Delete error:', error);
     return NextResponse.json(
-      { error: error.code === 'ENOENT' ? 'File not found' : 'Failed to delete file' },
-      { status: error.code === 'ENOENT' ? 404 : 500 }
+      { error: 'Failed to delete file' },
+      { status: 500 }
     );
   }
 }
