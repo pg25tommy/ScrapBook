@@ -27,6 +27,12 @@ export class LightTableEngine {
   private mouseY = 0;
   private isFlipped = false;
 
+  // Flip animation state (per DESIGN_SPEC.md §9: 150-250ms, ease-out)
+  private isAnimatingFlip = false;
+  private flipAnimationStart = 0;
+  private flipAnimationDuration = 200; // ms
+  private targetFlipped = false;
+
   constructor(opts?: EngineOpts) {
     this.onRequestFill = opts?.onRequestFill;
     if (opts?.safeInsets) this.safeInsets = opts.safeInsets;
@@ -112,6 +118,9 @@ export class LightTableEngine {
         }
       });
     }
+
+    // Center the view on initialization
+    this.resetCamera();
   }
 
   async setSlot(slot: Slot) {
@@ -191,9 +200,66 @@ export class LightTableEngine {
   }
 
   setFlipped(flipped: boolean) {
-    this.isFlipped = flipped;
-    if (this.currentSlot) {
-      this.setSlot(this.currentSlot);
+    // If already at target state, do nothing
+    if (this.isFlipped === flipped && !this.isAnimatingFlip) {
+      return;
+    }
+
+    // Start flip animation
+    this.targetFlipped = flipped;
+    this.isAnimatingFlip = true;
+    this.flipAnimationStart = performance.now();
+    this.animateFlip();
+  }
+
+  private animateFlip() {
+    if (!this.isAnimatingFlip || !this.world) {
+      return;
+    }
+
+    const now = performance.now();
+    const elapsed = now - this.flipAnimationStart;
+    const progress = Math.min(elapsed / this.flipAnimationDuration, 1);
+
+    // Ease-out cubic (per DESIGN_SPEC.md §9)
+    const eased = 1 - Math.pow(1 - progress, 3);
+
+    // Scale from 1 to 0 in first half, then 0 to 1 in second half
+    let scaleX: number;
+    if (eased < 0.5) {
+      // First half: scale down to 0
+      scaleX = 1 - (eased * 2);
+    } else {
+      // Second half: scale back up to 1
+      scaleX = (eased - 0.5) * 2;
+
+      // Switch content at midpoint (when scaleX = 0)
+      if (this.isFlipped !== this.targetFlipped) {
+        this.isFlipped = this.targetFlipped;
+        if (this.currentSlot) {
+          this.setSlot(this.currentSlot);
+        }
+      }
+    }
+
+    // Apply scale to all frame containers
+    this.world.children.forEach((child) => {
+      if (child instanceof PIXI.Container) {
+        child.scale.x = scaleX;
+      }
+    });
+
+    // Continue animation or finish
+    if (progress < 1) {
+      requestAnimationFrame(() => this.animateFlip());
+    } else {
+      this.isAnimatingFlip = false;
+      // Ensure final scale is exactly 1
+      this.world.children.forEach((child) => {
+        if (child instanceof PIXI.Container) {
+          child.scale.x = 1;
+        }
+      });
     }
   }
 
@@ -206,9 +272,10 @@ export class LightTableEngine {
     const frameW = slot.width + border * 2;
     const frameH = slot.height + border * 2 + bottomExtra;
 
+    // Realistic shadow - warm dark tone, not pure black (DESIGN_SPEC.md §6)
     const shadow = new PIXI.Graphics();
     shadow.roundRect(-frameW / 2, -frameH / 2, frameW, frameH, 8);
-    shadow.fill({ color: 0x000000, alpha: 0.25 });
+    shadow.fill({ color: 0x2a231c, alpha: 0.25 }); // Warm dark umber
     shadow.position.set(4, 6);
     const blur = new BlurFilter();
     (blur as any).strength = 6;
@@ -216,9 +283,10 @@ export class LightTableEngine {
     shadow.zIndex = 1;
     cont.addChild(shadow);
 
+    // Matte white slightly aged, not pure white (DESIGN_SPEC.md §6)
     const matte = new PIXI.Graphics();
     matte.roundRect(-frameW / 2, -frameH / 2, frameW, frameH, 8);
-    matte.fill({ color: 0xffffff, alpha: 0.98 });
+    matte.fill({ color: 0xfbf9f5, alpha: 0.98 }); // Aged matte white
     matte.zIndex = 2;
     cont.addChild(matte);
 
@@ -345,7 +413,7 @@ export class LightTableEngine {
           style: {
             fontFamily: 'ui-rounded, system-ui',
             fontSize: 16,
-            fill: 0x999999,
+            fill: 0x8b7355, // Warm brown, not grey (DESIGN_SPEC.md §2.3)
           }
         });
         errorText.anchor.set(0.5);
@@ -355,7 +423,7 @@ export class LightTableEngine {
       const style = new PIXI.TextStyle({
         fontFamily: 'ui-rounded, system-ui, -apple-system, Segoe UI',
         fontSize: 18,
-        fill: 0x1a1a1a,
+        fill: 0x2a2a2a, // Soft black, never pure black (DESIGN_SPEC.md §8)
         wordWrap: true,
         wordWrapWidth: slot.width - 16,
         dropShadow: true,

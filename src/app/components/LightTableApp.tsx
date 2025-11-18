@@ -230,19 +230,17 @@ export default function LightTableApp({ isAdmin = false }: LightTableAppProps) {
 
         // Get current state dynamically instead of using closure
         const currentState = useLightTableStore.getState();
-        if (currentState.isFlipped) {
-          // Double-click on back to edit text
+        if (currentState.isFlipped && isAdmin) {
+          // Double-click on back to edit text (ADMIN ONLY)
           isOpeningEditor.current = true;
           setEditText(currentState.slot.backText || '');
           setIsEditingBack(true);
           setTimeout(() => { isOpeningEditor.current = false; }, 500);
-        } else {
-          // Admin: clicking frame opens upload dialog
-          // Non-admin: clicking frame does nothing (use "Next Photo" button instead)
-          if (isAdmin) {
-            handleUploadClick();
-          }
+        } else if (!currentState.isFlipped && isAdmin) {
+          // Admin: clicking front frame opens upload dialog
+          handleUploadClick();
         }
+        // Non-admin: clicking frame does nothing (read-only, use double-click to flip)
       },
       safeInsets: { top: 84, left: 12, right: 12, bottom: 56 },
     });
@@ -294,11 +292,25 @@ export default function LightTableApp({ isAdmin = false }: LightTableAppProps) {
       container.addEventListener('pointermove', onMove);
       container.addEventListener('pointerup', onUp);
 
+      // Add double-click to flip on public pages (feels like holding a photo)
+      const onDoubleClick = (ev: MouseEvent) => {
+        if (!isAdmin && ev.target === targetCanvas) {
+          toggleFlip();
+        }
+      };
+
+      if (!isAdmin) {
+        container.addEventListener('dblclick', onDoubleClick);
+      }
+
       return () => {
         container.removeEventListener('wheel', onWheel);
         container.removeEventListener('pointerdown', onDown);
         container.removeEventListener('pointermove', onMove);
         container.removeEventListener('pointerup', onUp);
+        if (!isAdmin) {
+          container.removeEventListener('dblclick', onDoubleClick);
+        }
       };
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps

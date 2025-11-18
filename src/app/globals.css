@@ -1,4 +1,6 @@
 /* src/app/globals.css */
+/* Design Philosophy: Analog warmth + modern UI clarity */
+/* See DESIGN_SPEC.md for complete visual language */
 
 /* ---------------- Base / Reset ---------------- */
 *,
@@ -14,25 +16,34 @@ html, body {
 body {
   margin: 0;
 
-  /* Flat cream fallback */
-  background-color: #F3EDE0;
+  /* Warm parchment base - deep earth tone */
+  background-color: #f5f1e8;
 
-  /* Layer 1: tiled paper texture across the whole screen
-     Layer 2: faint gradient overlay for depth */
+  /* Layer 1: paper texture with visible fibers
+     Layer 2: gentle vignette to anchor focus in middle
+     Layer 3: subtle illuminated center (like real light table) */
   background-image:
     url('/textures/paper.png'),
-    linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(243,237,224,0.15) 100%);
+    radial-gradient(ellipse at center, transparent 0%, rgba(42,35,28,0.12) 100%),
+    radial-gradient(ellipse at center, rgba(255,252,245,0.15) 0%, transparent 60%);
 
-  background-repeat: repeat, no-repeat;     /* texture repeats everywhere */
-  background-size: auto, cover;             /* tile texture, gradient covers screen */
-  background-position: top left, center;    /* texture anchored top-left */
-  background-attachment: fixed, fixed;      /* both stay put when scrolling/panning */
+  background-repeat: repeat, no-repeat, no-repeat;
+  background-size: auto, cover, cover;
+  background-position: top left, center, center;
+  background-attachment: fixed, fixed, fixed;
 
-  color: #1a1a1a;
-  font-family: ui-rounded, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial,
+  /* Soft black, never pure black (per DESIGN_SPEC.md §8) */
+  color: #2a2a2a;
+
+  /* Modern humanist sans-serif (per DESIGN_SPEC.md §8) */
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Source Sans Pro",
+               system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial,
                "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  /* Slight letter-spacing for airier feel (per DESIGN_SPEC.md §8) */
+  letter-spacing: 0.01em;
 
   /* Reduce accidental text selection while dragging */
   -webkit-user-select: none;
@@ -40,18 +51,18 @@ body {
   user-select: none;
 }
 
-/* Accessibility: visible, tidy focus */
+/* Accessibility: visible, tidy focus with earth tone */
 :focus { outline: none; }
 :focus-visible {
-  outline: 2px solid #6a8fe6;
+  outline: 2px solid #8b7355;  /* Warm brown instead of blue */
   outline-offset: 2px;
 }
 
 /* ---------------- Utilities ---------------- */
 
-/* Remove any old gradient helpers */
-.paper-bg { background: #F3EDE0 !important; }
-.top-band { background: #F3EDE0 !important; }
+/* Warm parchment color utilities */
+.paper-bg { background: #f5f1e8 !important; }
+.top-band { background: #f5f1e8 !important; }
 
 /* Hide scrollbars where we want clean edges */
 .no-scrollbars::-webkit-scrollbar { display: none; }
@@ -62,34 +73,66 @@ body {
 
 /* ---------------- UI Elements ---------------- */
 
-/* Toolbar & buttons */
+/* Toolbar & buttons - Minimal but warm (per DESIGN_SPEC.md §10) */
 .toolbar-btn {
   appearance: none;
-  border: 0;
-  border-radius: 9999px;
-  background: rgba(255, 255, 255, 0.9);
-  backdrop-filter: saturate(120%) blur(4px);
-  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-  color: #222;
+  border: 1px solid rgba(208, 192, 160, 0.3);  /* Soft beige border */
+
+  /* Soft rounded corners, not pill-shaped (per DESIGN_SPEC.md §10) */
+  border-radius: 6px;
+
+  /* Warm cream with slight paper grain overlay (per DESIGN_SPEC.md §10) */
+  background:
+    linear-gradient(to bottom, rgba(245, 241, 232, 0.02), transparent),
+    rgba(255, 253, 248, 0.95);
+  backdrop-filter: saturate(110%) blur(3px);
+
+  /* Soft shadow with warm tint */
+  box-shadow:
+    0 1px 3px rgba(107, 93, 79, 0.08),
+    0 1px 2px rgba(107, 93, 79, 0.06);
+
+  /* Soft black text (per DESIGN_SPEC.md §8) */
+  color: #2a2a2a;
+
   font-size: 12px;
+  font-weight: 500;
   line-height: 1;
   padding: 8px 12px;
   cursor: pointer;
-  transition: box-shadow 120ms ease, transform 80ms ease, background 120ms ease;
+
+  /* 150-250ms range, ease-out (per DESIGN_SPEC.md §9) */
+  transition:
+    box-shadow 180ms ease-out,
+    transform 150ms ease-out,
+    background 200ms ease-out,
+    border-color 180ms ease-out;
 }
 
+/* Earth-tone hover state (per DESIGN_SPEC.md §4.2) */
 .toolbar-btn:hover {
-  background: rgba(255, 255, 255, 0.98);
-  box-shadow: 0 4px 10px rgba(0,0,0,0.12);
+  background:
+    linear-gradient(to bottom, rgba(245, 241, 232, 0.04), transparent),
+    rgba(255, 250, 240, 0.98);
+
+  /* Slight warm highlight (per DESIGN_SPEC.md §4.2) */
+  border-color: rgba(208, 192, 160, 0.5);
+
+  /* Soft shadow lift (per DESIGN_SPEC.md §4.2) */
+  box-shadow:
+    0 2px 6px rgba(107, 93, 79, 0.12),
+    0 3px 8px rgba(107, 93, 79, 0.08);
 }
 
+/* Light elastic feel on press (per DESIGN_SPEC.md §9) */
 .toolbar-btn:active {
-  transform: translateY(1px);
+  transform: translateY(1px) scale(0.98);
+  transition: transform 120ms ease-out;
 }
 
-/* Small shadow utility (used for bottom hint) */
+/* Small shadow utility with warm tint */
 .shadow {
-  box-shadow: 0 2px 10px rgba(0,0,0,0.10);
+  box-shadow: 0 2px 10px rgba(107, 93, 79, 0.10);
 }
 
 /* ---------------- Pixi Canvas Hygiene ---------------- */
