@@ -3,7 +3,7 @@ import { unlink, readdir } from 'fs/promises';
 import path from 'path';
 import { requireAuth } from '@/lib/auth';
 
-export const runtime = 'nodejs' as const;
+export const runtime = 'nodejs';
 
 const exts = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif', '.avif']);
 
