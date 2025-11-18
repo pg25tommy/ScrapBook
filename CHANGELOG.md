@@ -6,6 +6,154 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.5.1] - 2025-11-18
+
+### Added - Enhanced Navigation & Photo Management
+
+#### Admin Navigation Improvements
+**What:** Complete navigation system across all admin pages
+**Why:** Users needed ability to navigate freely between admin pages without getting stuck
+
+- **Dashboard Button on Page Editor**
+  - Added "← Dashboard" button to PageEditor header
+  - Direct navigation to `/admin` without confirmation dialog
+  - Positioned before other action buttons for easy access
+  - **Why**: Users couldn't easily return to dashboard while editing pages
+
+- **View Gallery Button on Admin Pages**
+  - Added "👁️ View Gallery" button to AdminDashboard
+  - Added "👁️ View Gallery" button to PageEditor
+  - Quick access to public gallery from any admin page
+  - **Why**: Users wanted to preview published pages without leaving admin interface
+
+- **Full Admin Navigation Flow**
+  - From Dashboard: Access Gallery, New Page, Edit any page, Logout
+  - From Page Editor: Access Dashboard, Gallery, Save, Cancel
+  - Consistent button styling across all admin pages
+  - **Why**: Complete navigation freedom improves admin workflow
+
+#### Photo Archive Management
+**What:** Individual photo deletion in archive dropdown
+**Why:** Users wanted granular control over photo library
+
+- **Delete Individual Photos**
+  - Added 🗑️ delete button next to each archived photo
+  - Confirmation dialog before deletion
+  - Removes photo from filesystem via API
+  - Clears displayed photo if currently selected
+  - Automatically reloads archive after deletion
+  - **Why**: "Clear All" was too destructive; users needed selective deletion
+
+- **Enhanced Archive UI**
+  - Photo cards with filename and upload date
+  - Hover states for better interactivity
+  - Delete button with hover effect (red tint)
+  - Improved visual hierarchy
+  - **Why**: Better UX for managing growing photo libraries
+
+#### Public Page View Fixes
+**What:** Fixed published pages not displaying saved content
+**Why:** Public viewers saw empty frames instead of saved scrapbook pages
+
+- **Conditional Storage Loading**
+  - `loadFromStorage()` now only runs for admin pages (`isAdmin={true}`)
+  - Public pages use data loaded from database via PublicPageView
+  - Prevents localStorage from overriding database content
+  - **Why**: Admin localStorage was conflicting with public database state
+
+- **Engine Initialization Fix**
+  - Changed engine to use current state instead of closure value
+  - Uses `useLightTableStore.getState().slot` to get real-time state
+  - Ensures PublicPageView's loaded data is displayed
+  - **Why**: Engine was using initial empty state instead of loaded content
+
+- **Admin Button Hiding**
+  - Public pages explicitly pass `isAdmin={false}` to LightTableApp
+  - Hides admin-only controls (Next Photo, Flip, etc.)
+  - Clean read-only viewing experience
+  - **Why**: Public users shouldn't see admin functionality
+
+### Added - Design Documentation
+
+#### Design Specification
+**What:** Comprehensive design philosophy and visual language document
+**Why:** Needed centralized reference for maintaining consistent aesthetic
+
+- **DESIGN_SPEC.md Created**
+  - 12 sections covering complete design system
+  - Analog warmth + modern UI blend philosophy
+  - Deep earth-tone palette specifications
+  - Polaroid frame style requirements
+  - Typography and motion guidelines
+  - UI chrome philosophy
+  - **Why**: Ensures design consistency as project evolves
+
+- **Key Design Principles Documented**
+  - Warm, analog tactility with modern clarity
+  - Vintage scrapbook charm with deep earth tones
+  - Gentle, physical, soft interactions
+  - Hand-touched feel with clean functionality
+  - **Why**: Maintains unique identity of scrapbook aesthetic
+
+### Technical Improvements
+
+#### Photo Deletion API
+**What:** Enhanced photo deletion endpoint
+**Why:** Support individual file deletion with security validation
+
+- **Individual File Deletion**
+  - `/api/admin/photos/delete?filename=<name>` endpoint
+  - Path traversal protection (blocks `..`, `/`, `\`)
+  - File extension validation (only images allowed)
+  - Returns deleted filename in response
+  - **Why**: Secure granular photo management
+
+#### State Management Improvements
+**What:** Better separation of admin and public state
+**Why:** Prevent state conflicts between admin and public views
+
+- **Conditional Behavior Based on `isAdmin` Prop**
+  - Admin pages: Load from localStorage, show controls
+  - Public pages: Load from database, hide controls
+  - Clear separation of concerns
+  - **Why**: Prevents admin state from leaking into public views
+
+### Bug Fixes
+
+**Public Page Empty Frame Issue**
+- **Problem**: Published pages showed empty Polaroid frame instead of saved photo
+- **Root Cause**: localStorage loading was overriding database content
+- **Solution**: Made `loadFromStorage()` admin-only; fixed engine initialization
+- **Impact**: Published pages now display saved content correctly
+
+**Admin Navigation Limitation**
+- **Problem**: No way to return to dashboard from page editor without Cancel confirmation
+- **Root Cause**: Missing navigation button
+- **Solution**: Added "← Dashboard" button to PageEditor
+- **Impact**: Seamless navigation between admin pages
+
+**Missing Gallery Access from Editor**
+- **Problem**: Couldn't view public gallery while editing pages
+- **Root Cause**: No navigation button on PageEditor
+- **Solution**: Added "👁️ View Gallery" button to both admin pages
+- **Impact**: Easy public gallery preview from anywhere in admin
+
+### Documentation Updates
+
+**README.md**
+- Updated version to 0.5.1
+- Added photo archive management features
+- Documented admin navigation improvements
+- **Why**: Keep documentation in sync with features
+
+**DESIGN_SPEC.md**
+- Created comprehensive design philosophy document
+- Documented visual language and aesthetic principles
+- Included deliverable targets for future development
+- **Why**: Centralized design reference for consistency
+
+---
+
 ## [0.5.0] - 2025-11-15
 
 ### Added - Admin/Public Architecture

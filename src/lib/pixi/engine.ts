@@ -40,8 +40,12 @@ export class LightTableEngine {
       antialias: true,
       backgroundAlpha: 0,
       autoDensity: true,
-      powerPreference: 'high-performance',
+      // Force Canvas2D renderer to avoid Firefox WebGL context loss
+      forceCanvas: true,
     };
+
+    console.log('[Engine] Forcing Canvas2D renderer due to Firefox WebGL issues');
+    console.log('[Engine] Initializing PixiJS with options:', appOpts);
 
     if (supportsAsyncInit) {
       const app = new PIXI.Application() as any;
@@ -58,7 +62,11 @@ export class LightTableEngine {
 
     this.world = new PIXI.Container();
     (this.world as any).sortableChildren = true;
+    this.world.visible = true;
+    (this.world as any).renderable = true;
+    (this.world as any).interactiveChildren = true;
     this.app!.stage.addChild(this.world);
+    console.log('[Engine] World container created and added to stage');
 
     // Loupe layer (rendered on top)
     this.loupeContainer = new PIXI.Container();
@@ -85,9 +93,30 @@ export class LightTableEngine {
       this.mouseX = ev.clientX - rect.left;
       this.mouseY = ev.clientY - rect.top;
     });
+
+    // Log renderer type
+    console.log('[Engine] Renderer type:', this.app.renderer.type);
+    console.log('[Engine] Renderer name:', (this.app.renderer as any).rendererLogId || 'unknown');
+
+    // Handle WebGL context loss
+    if (canvas instanceof HTMLCanvasElement) {
+      canvas.addEventListener('webglcontextlost', (e) => {
+        console.error('[Engine] WebGL context lost!', e);
+        e.preventDefault();
+      });
+      canvas.addEventListener('webglcontextrestored', () => {
+        console.log('[Engine] WebGL context restored');
+        // Force re-render
+        if (this.currentSlot) {
+          this.setSlot(this.currentSlot);
+        }
+      });
+    }
   }
 
   async setSlot(slot: Slot) {
+    console.log('[Engine] setSlot called with:', slot);
+    console.log('[Engine] isFlipped:', this.isFlipped);
     if (!this.world || !this.app) return;
     this.currentSlot = slot;
 
@@ -96,6 +125,21 @@ export class LightTableEngine {
     const frame = this.buildFrame(slot);
     frame.position.set(slot.x, slot.y);
     this.world.addChild(frame);
+
+    console.log('[Engine] World state after adding frame:', {
+      worldX: this.world.x,
+      worldY: this.world.y,
+      worldScaleX: this.world.scale.x,
+      worldScaleY: this.world.scale.y,
+      worldVisible: this.world.visible,
+      frameX: frame.x,
+      frameY: frame.y,
+      frameVisible: frame.visible,
+      frameWidth: slot.width,
+      frameHeight: slot.height,
+      appWidth: this.app.screen.width,
+      appHeight: this.app.screen.height
+    });
 
     if (this.isFlipped) {
       // Show the back of the photo with text
@@ -115,18 +159,22 @@ export class LightTableEngine {
       frame.addChild(backContainer);
     } else {
       // Show the front with photo/content
+      console.log('[Engine] Showing front, slot.content:', slot.content);
       if (slot.content) {
         try {
+          console.log('[Engine] Calling makeContent...');
           const node = await this.makeContent(slot, slot.content);
+          console.log('[Engine] makeContent returned node:', node);
           this.maskIntoFrame(frame, node);
+          console.log('[Engine] maskIntoFrame completed');
         } catch (e) {
           console.error('Failed to build slot content:', e);
         }
       } else {
         const plus = new PIXI.Graphics();
-        plus.lineStyle(3, 0x9b8e7a, 0.9)
-          .moveTo(0, -18).lineTo(0, 18)
-          .moveTo(-18, 0).lineTo(18, 0);
+        plus.moveTo(0, -18).lineTo(0, 18);
+        plus.moveTo(-18, 0).lineTo(18, 0);
+        plus.stroke({ width: 3, color: 0x9b8e7a, alpha: 0.9 });
         plus.alpha = 0.7;
         this.maskIntoFrame(frame, plus);
       }
@@ -159,9 +207,8 @@ export class LightTableEngine {
     const frameH = slot.height + border * 2 + bottomExtra;
 
     const shadow = new PIXI.Graphics();
-    shadow.beginFill(0x000000, 0.25)
-      .drawRoundedRect(-frameW / 2, -frameH / 2, frameW, frameH, 8)
-      .endFill();
+    shadow.roundRect(-frameW / 2, -frameH / 2, frameW, frameH, 8);
+    shadow.fill({ color: 0x000000, alpha: 0.25 });
     shadow.position.set(4, 6);
     const blur = new BlurFilter();
     (blur as any).strength = 6;
@@ -170,23 +217,22 @@ export class LightTableEngine {
     cont.addChild(shadow);
 
     const matte = new PIXI.Graphics();
-    matte.beginFill(0xffffff, 0.98)
-      .drawRoundedRect(-frameW / 2, -frameH / 2, frameW, frameH, 8)
-      .endFill();
+    matte.roundRect(-frameW / 2, -frameH / 2, frameW, frameH, 8);
+    matte.fill({ color: 0xffffff, alpha: 0.98 });
     matte.zIndex = 2;
     cont.addChild(matte);
 
     const opening = new PIXI.Graphics();
-    opening.beginFill(0x000000, 1)
-      .drawRoundedRect(
-        -slot.width / 2,
-        -(slot.height + bottomExtra / 2) / 2,
-        slot.width,
-        slot.height,
-        2
-      )
-      .endFill();
-    opening.visible = false;
+    opening.roundRect(
+      -slot.width / 2,
+      -(slot.height + bottomExtra / 2) / 2,
+      slot.width,
+      slot.height,
+      2
+    );
+    opening.fill({ color: 0xffffff, alpha: 1 });
+    // In PixiJS 8.x, masks need to be visible and added to the scene
+    opening.visible = true;
     opening.zIndex = 3;
     cont.addChild(opening);
 
@@ -217,28 +263,35 @@ export class LightTableEngine {
 
   private maskIntoFrame(frame: PIXI.Container, node: any) {
     const opening: PIXI.Graphics = (frame as any).__opening__;
+    console.log('[Engine] maskIntoFrame - Applying mask (PixiJS 8.x compatible)');
+    // In PixiJS 8.x, set the mask (opening must be visible and in scene)
     (node as any).mask = opening;
     node.zIndex = 4;
     frame.addChild(node as any);
+    console.log('[Engine] maskIntoFrame - Mask applied successfully');
   }
 
   /** Robust loader that works for both same-origin and proxied URLs */
   private async loadImageTexture(url: string): Promise<PIXI.Texture> {
     try {
-      const tex = await (PIXI as any).Texture.fromURL(url, {
-        resourceOptions: { crossorigin: '' },
-      });
-      return tex as PIXI.Texture;
+      // Use PixiJS 8.x Assets API for loading textures
+      const texture = await PIXI.Assets.load(url);
+      return texture as PIXI.Texture;
     } catch (e) {
-      console.warn('Texture.fromURL failed, falling back to blob pipeline:', e);
+      console.warn('Assets.load failed, falling back to blob pipeline:', e);
+      // Fallback: fetch as blob and create texture
       const res = await fetch(url, { cache: 'no-store' });
       if (!res.ok) throw new Error(`fetch failed ${res.status}`);
       const blob = await res.blob();
       const objUrl = URL.createObjectURL(blob);
       try {
         const img = new Image();
+        img.crossOrigin = 'anonymous';
         img.src = objUrl;
-        try { /* @ts-ignore */ await img.decode?.(); } catch {}
+        await new Promise((resolve, reject) => {
+          img.onload = resolve;
+          img.onerror = reject;
+        });
         return PIXI.Texture.from(img);
       } finally {
         URL.revokeObjectURL(objUrl);
@@ -250,18 +303,54 @@ export class LightTableEngine {
     const bottomExtra = 28;
 
     if (content.kind === 'image') {
-      const tex = await this.loadImageTexture(content.src);
-      const sp = new PIXI.Sprite(tex);
-      sp.anchor.set(0.5);
+      console.log('[Engine] makeContent loading image from:', content.src);
+      try {
+        const tex = await this.loadImageTexture(content.src);
 
-      const iw = tex.width || sp.texture.width;
-      const ih = tex.height || sp.texture.height;
-      const rw = slot.width / iw;
-      const rh = slot.height / ih;
-      const scale = (content.fit === 'contain' ? Math.min(rw, rh) : Math.max(rw, rh));
-      sp.scale.set(scale);
-      sp.y = -(bottomExtra * 0.25);
-      return sp;
+        // Check if texture is valid
+        if (!tex || !tex.width || !tex.height) {
+          console.warn('[Engine] Image texture not available, showing placeholder');
+          // Return placeholder instead of throwing
+          const errorText = new PIXI.Text({
+            text: '📷 Click to add photo',
+            style: {
+              fontFamily: 'ui-rounded, system-ui',
+              fontSize: 16,
+              fill: 0x9b8e7a,
+            }
+          });
+          errorText.anchor.set(0.5);
+          return errorText;
+        }
+
+        console.log('[Engine] Texture loaded:', { width: tex.width, height: tex.height });
+        const sp = new PIXI.Sprite(tex);
+        sp.anchor.set(0.5);
+
+        const iw = tex.width || sp.texture.width;
+        const ih = tex.height || sp.texture.height;
+        console.log('[Engine] Image dimensions:', { iw, ih, slotW: slot.width, slotH: slot.height });
+        const rw = slot.width / iw;
+        const rh = slot.height / ih;
+        const scale = (content.fit === 'contain' ? Math.min(rw, rh) : Math.max(rw, rh));
+        console.log('[Engine] Scale calculated:', scale, 'fit:', content.fit);
+        sp.scale.set(scale);
+        sp.y = -(bottomExtra * 0.25);
+        return sp;
+      } catch (error) {
+        console.warn('[Engine] Failed to load image:', error instanceof Error ? error.message : error);
+        // Return a placeholder graphic instead of crashing
+        const errorText = new PIXI.Text({
+          text: '⚠️ Image not found',
+          style: {
+            fontFamily: 'ui-rounded, system-ui',
+            fontSize: 16,
+            fill: 0x999999,
+          }
+        });
+        errorText.anchor.set(0.5);
+        return errorText;
+      }
     } else {
       const style = new PIXI.TextStyle({
         fontFamily: 'ui-rounded, system-ui, -apple-system, Segoe UI',

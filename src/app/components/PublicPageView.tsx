@@ -84,7 +84,7 @@ export default function PublicPageView({ page }: PublicPageViewProps) {
 
       {/* Light Table (Read-only view) */}
       <div style={{ paddingTop: 64, width: '100%', height: '100%' }}>
-        <LightTableApp />
+        <LightTableApp isAdmin={false} />
       </div>
     </div>
   );

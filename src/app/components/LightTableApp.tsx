@@ -7,9 +7,14 @@ import {
   type SlotContent,
 } from '../../state/useLightTableStore';
 
-export default function LightTableApp() {
+type LightTableAppProps = {
+  isAdmin?: boolean;
+};
+
+export default function LightTableApp({ isAdmin = false }: LightTableAppProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const engineRef = useRef<LightTableEngine | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const {
     slot,
@@ -22,15 +27,131 @@ export default function LightTableApp() {
     loadFromStorage,
   } = useLightTableStore();
 
-  const cycleRef = useRef(0);
   const [isEditingBack, setIsEditingBack] = useState(false);
   const [editText, setEditText] = useState('');
+  const [uploading, setUploading] = useState(false);
   const isOpeningEditor = useRef(false);
 
-  // Load saved slot data on mount
+  // Photo archive state
+  type PhotoInfo = {
+    filename: string;
+    url: string;
+    uploadDate: string;
+    size: number;
+  };
+  const [photoArchive, setPhotoArchive] = useState<PhotoInfo[]>([]);
+  const [showArchiveDropdown, setShowArchiveDropdown] = useState(false);
+
+  // Load saved slot data on mount (admin only - public pages load data via PublicPageView)
   useEffect(() => {
-    loadFromStorage();
-  }, [loadFromStorage]);
+    if (isAdmin) {
+      loadFromStorage();
+    }
+  }, [isAdmin, loadFromStorage]);
+
+  // Load photo archive
+  async function loadPhotoArchive() {
+    try {
+      const res = await fetch('/api/photos/list', { cache: 'no-store' });
+      if (!res.ok) throw new Error('Failed to load photo archive');
+      const data = await res.json();
+      setPhotoArchive(data.photos || []);
+    } catch (error) {
+      console.error('Error loading photo archive:', error);
+    }
+  }
+
+  // Load photo archive on mount and when upload completes
+  useEffect(() => {
+    loadPhotoArchive();
+  }, []);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    if (!showArchiveDropdown) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      // Check if click is outside the dropdown
+      if (!target.closest('.archive-dropdown-container')) {
+        setShowArchiveDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showArchiveDropdown]);
+
+  // Select photo from archive
+  function selectPhotoFromArchive(photo: PhotoInfo) {
+    setSlotContent({
+      kind: 'image',
+      src: photo.url,
+      fit: 'cover',
+    });
+    setShowArchiveDropdown(false);
+  }
+
+  // Delete a single photo
+  async function handleDeletePhoto(filename: string, photoUrl: string) {
+    if (!confirm(`Delete ${filename}?`)) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/admin/photos/delete?filename=${encodeURIComponent(filename)}`, {
+        method: 'DELETE',
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to delete photo');
+      }
+
+      // If the deleted photo is currently displayed, clear it
+      if (slot.content?.kind === 'image' && slot.content.src === photoUrl) {
+        setSlotContent(undefined);
+      }
+
+      // Reload archive
+      await loadPhotoArchive();
+    } catch (error: any) {
+      console.error('Delete error:', error);
+      alert(error.message || 'Failed to delete photo');
+    }
+  }
+
+  // Delete all photos
+  async function handleClearAllPhotos() {
+    if (!confirm('Are you sure you want to delete ALL uploaded photos? This cannot be undone.')) {
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/admin/photos/delete?all=true', {
+        method: 'DELETE',
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to delete photos');
+      }
+
+      const data = await res.json();
+      alert(data.message || 'All photos deleted');
+
+      // Clear current slot content (both in state and localStorage)
+      setSlotContent(undefined);
+
+      // Reload archive (should now be empty)
+      await loadPhotoArchive();
+
+      setShowArchiveDropdown(false);
+    } catch (error: any) {
+      console.error('Delete error:', error);
+      alert(error.message || 'Failed to delete photos');
+    }
+  }
 
   async function loadFromPool(pool: 'local' | 'external' | 'any', index?: number) {
     const url = index != null ? `/api/page?pool=${pool}&index=${index}` : `/api/page?pool=${pool}`;
@@ -39,19 +160,64 @@ export default function LightTableApp() {
     const json = await res.json();
 
     if (json.slot) {
-      // update store for persistence/history
+      // update store - the useEffect will sync the engine
       setSlotContent(json.slot as SlotContent);
-
-      // update PIXI immediately so UI reflects the change
-      const engine = engineRef.current;
-      if (engine) {
-        const nextSlot = { ...slot, content: json.slot as SlotContent };
-        await engine.setSlot(nextSlot);
-      }
     } else {
       alert(`No ${pool} images found. Add some to /public/photos.`);
     }
   }
+
+  async function handleFileUpload(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif', 'image/avif'];
+    if (!validTypes.includes(file.type)) {
+      alert('Please upload a valid image file (JPG, PNG, WEBP, GIF, or AVIF)');
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const res = await fetch('/api/admin/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Upload failed');
+      }
+
+      const data = await res.json();
+      console.log('[Upload] API response:', data);
+
+      // Update store with uploaded image - the useEffect will handle updating the engine
+      setSlotContent(data.slot as SlotContent);
+      console.log('[Upload] Store updated, useEffect will sync engine');
+
+      // Reload photo archive to include new upload
+      await loadPhotoArchive();
+
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    } catch (error: any) {
+      console.error('Upload error:', error);
+      alert(error.message || 'Failed to upload image');
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
+  };
 
   useEffect(() => {
     const container = containerRef.current;
@@ -71,10 +237,11 @@ export default function LightTableApp() {
           setIsEditingBack(true);
           setTimeout(() => { isOpeningEditor.current = false; }, 500);
         } else {
-          // Click frame to cycle through ANY pool deterministically
-          cycleRef.current++;
-          try { await loadFromPool('any', cycleRef.current); }
-          catch (e) { console.error(e); alert('Could not load image.'); }
+          // Admin: clicking frame opens upload dialog
+          // Non-admin: clicking frame does nothing (use "Next Photo" button instead)
+          if (isAdmin) {
+            handleUploadClick();
+          }
         }
       },
       safeInsets: { top: 84, left: 12, right: 12, bottom: 56 },
@@ -83,15 +250,13 @@ export default function LightTableApp() {
 
     (async () => {
       await engine.init(container);
-      await engine.setSlot(slot);
+      // Get the current slot from store instead of using closure
+      const currentSlot = useLightTableStore.getState().slot;
+      await engine.setSlot(currentSlot);
       container.style.display = 'block';
 
-      // Auto-load ONE random local photo on first mount if available; fallback to any
-      try {
-        await loadFromPool('local');
-      } catch {
-        try { await loadFromPool('any'); } catch (e) { console.error(e); }
-      }
+      // REMOVED: Auto-load behavior that was causing unwanted photo cycling
+      // Photos now only change when user explicitly clicks "Next Photo" or selects from archive
 
       // WORLD pan/zoom
       const onWheel = (ev: WheelEvent) => {
@@ -180,24 +345,215 @@ export default function LightTableApp() {
     <div
       style={{ background: 'transparent', width: '100%', height: '100vh', position: 'relative', overflow: 'hidden' }}
     >
+      {/* Hidden file input for upload */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleFileUpload}
+        style={{ display: 'none' }}
+      />
+
       {/* Toolbar */}
       <div
         className="toolbar-fixed"
         style={{
-          position: 'fixed', top: 12, left: 12, zIndex: 1000,
+          position: 'fixed', top: isAdmin ? 68 : 12, left: 12, zIndex: 2100,
           display: 'flex', gap: 8, transform: 'translateZ(0)', willChange: 'transform'
         }}
       >
-        {/* 1. Cycle Page Image */}
-        <button
-          className="toolbar-btn"
-          onClick={() => loadFromPool('any')}
-          title="Cycle page image"
-          disabled={isFlipped}
-          style={{ opacity: isFlipped ? 0.5 : 1 }}
-        >
-          Next Photo
-        </button>
+        {/* Upload Image (Admin only) */}
+        {isAdmin && (
+          <button
+            className="toolbar-btn"
+            onClick={handleUploadClick}
+            title="Upload your own image"
+            disabled={isFlipped || uploading}
+            style={{
+              opacity: isFlipped || uploading ? 0.5 : 1,
+              background: uploading ? 'rgba(200, 200, 200, 0.3)' : undefined,
+            }}
+          >
+            {uploading ? '⏳ Uploading...' : '📤 Upload Image'}
+          </button>
+        )}
+
+        {/* Photo Archive Dropdown (Admin only) */}
+        {isAdmin && (
+          <div className="archive-dropdown-container" style={{ position: 'relative' }}>
+            <button
+              className="toolbar-btn"
+              onClick={() => setShowArchiveDropdown(!showArchiveDropdown)}
+              title="View uploaded photos archive"
+              disabled={isFlipped}
+              style={{
+                opacity: isFlipped ? 0.5 : 1,
+                background: showArchiveDropdown ? 'rgba(150, 180, 220, 0.3)' : undefined,
+              }}
+            >
+              📂 Archive ({photoArchive.length})
+            </button>
+
+            {showArchiveDropdown && photoArchive.length > 0 && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
+                  marginTop: 8,
+                  width: 320,
+                  maxHeight: 400,
+                  overflowY: 'auto',
+                  background: 'rgba(255, 255, 255, 0.98)',
+                  border: '2px solid #c9b89a',
+                  borderRadius: 8,
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
+                  zIndex: 3000,
+                }}
+              >
+                <div style={{
+                  padding: '8px 12px',
+                  borderBottom: '1px solid #e0d0b0',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}>
+                  <span style={{
+                    fontWeight: 600,
+                    fontSize: 13,
+                    color: '#2a2a2a',
+                  }}>
+                    Your Uploaded Photos
+                  </span>
+                  <button
+                    onClick={handleClearAllPhotos}
+                    style={{
+                      padding: '4px 8px',
+                      fontSize: 11,
+                      border: '1px solid #d0a0a0',
+                      borderRadius: 4,
+                      background: 'rgba(255, 200, 200, 0.15)',
+                      color: '#c44',
+                      cursor: 'pointer',
+                      fontWeight: 500,
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'rgba(255, 200, 200, 0.3)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'rgba(255, 200, 200, 0.15)';
+                    }}
+                    title="Delete all uploaded photos"
+                  >
+                    🗑️ Clear All
+                  </button>
+                </div>
+                {photoArchive.map((photo) => {
+                  const date = new Date(photo.uploadDate);
+                  const dateStr = date.toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric',
+                  });
+                  const timeStr = date.toLocaleTimeString('en-US', {
+                    hour: 'numeric',
+                    minute: '2-digit',
+                  });
+
+                  return (
+                    <div
+                      key={photo.url}
+                      style={{
+                        width: '100%',
+                        borderBottom: '1px solid #f0e8d8',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = 'rgba(200, 220, 240, 0.15)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'transparent';
+                      }}
+                    >
+                      <button
+                        onClick={() => selectPhotoFromArchive(photo)}
+                        style={{
+                          flex: 1,
+                          padding: '10px 12px',
+                          border: 'none',
+                          background: 'transparent',
+                          textAlign: 'left',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: 4,
+                        }}
+                      >
+                        <div style={{
+                          fontSize: 13,
+                          color: '#2a2a2a',
+                          fontWeight: 500,
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                        }}>
+                          {photo.filename}
+                        </div>
+                        <div style={{
+                          fontSize: 11,
+                          color: '#666',
+                        }}>
+                          📅 {dateStr} at {timeStr}
+                        </div>
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeletePhoto(photo.filename, photo.url);
+                        }}
+                        style={{
+                          padding: '6px 10px',
+                          margin: '0 8px 0 0',
+                          fontSize: 12,
+                          border: '1px solid #e0a0a0',
+                          borderRadius: 4,
+                          background: 'rgba(255, 200, 200, 0.1)',
+                          color: '#c44',
+                          cursor: 'pointer',
+                          flexShrink: 0,
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = 'rgba(255, 200, 200, 0.25)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = 'rgba(255, 200, 200, 0.1)';
+                        }}
+                        title={`Delete ${photo.filename}`}
+                      >
+                        🗑️
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 1. Cycle Page Image (Admin only) */}
+        {isAdmin && (
+          <button
+            className="toolbar-btn"
+            onClick={() => loadFromPool('any')}
+            title="Cycle page image"
+            disabled={isFlipped}
+            style={{ opacity: isFlipped ? 0.5 : 1 }}
+          >
+            Next Photo
+          </button>
+        )}
 
         {/* 2. Toggle Loupe */}
         <button
@@ -228,16 +584,18 @@ export default function LightTableApp() {
           ⊙ Reset View
         </button>
 
-        {/* 5. Load External Index */}
-        <button
-          className="toolbar-btn"
-          onClick={() => loadFromPool('external')}
-          title="Load external image index"
-          disabled={isFlipped}
-          style={{ opacity: isFlipped ? 0.5 : 1 }}
-        >
-          🔀 Load External
-        </button>
+        {/* 5. Load External Index (Admin only) */}
+        {isAdmin && (
+          <button
+            className="toolbar-btn"
+            onClick={() => loadFromPool('external')}
+            title="Load external image index"
+            disabled={isFlipped}
+            style={{ opacity: isFlipped ? 0.5 : 1 }}
+          >
+            🔀 Load External
+          </button>
+        )}
       </div>
 
       {/* Pixi mounts here */}
@@ -318,7 +676,9 @@ export default function LightTableApp() {
       }}>
         {isFlipped
           ? '📝 Double-click frame to edit text • Click "Show Front" to flip back'
-          : '🎞 Click frame to cycle • Scroll to zoom • Drag to pan • Click "Flip Over" to add notes'}
+          : isAdmin
+          ? '📤 Click frame to upload • Scroll to zoom • Drag to pan • Click "Flip Over" to add notes'
+          : '🖼️ Scroll to zoom • Drag to pan • Click "Flip Over" to add notes'}
       </div>
     </div>
   );

@@ -1,7 +1,7 @@
 # Light Table — Technical Specification
-version: 0.5.0
-date: 2025-11-15
-status: Production-Ready Admin/Public Architecture
+version: 0.5.1
+date: 2025-11-18
+status: Production-Ready Admin/Public Architecture with Enhanced Navigation
 
 ---
 

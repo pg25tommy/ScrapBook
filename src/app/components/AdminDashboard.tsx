@@ -70,6 +70,22 @@ export default function AdminDashboard({ initialPages }: AdminDashboardProps) {
           </h1>
           <div style={{ display: 'flex', gap: 12 }}>
             <button
+              onClick={() => router.push('/')}
+              className="toolbar-btn"
+              style={{
+                padding: '10px 20px',
+                background: '#fff',
+                color: '#6b5d4f',
+                border: '1px solid #6b5d4f',
+                borderRadius: 6,
+                cursor: 'pointer',
+                fontSize: 14,
+                fontWeight: 500,
+              }}
+            >
+              👁️ View Gallery
+            </button>
+            <button
               onClick={() => router.push('/admin/pages/new')}
               className="toolbar-btn"
               style={{

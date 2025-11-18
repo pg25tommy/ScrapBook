@@ -1,6 +1,6 @@
 # Light Table — Scrapbook Web App
 
-**Version:** 0.5.0
+**Version:** 0.5.1
 **Owner:** Tommy Minter
 **Status:** Active
 

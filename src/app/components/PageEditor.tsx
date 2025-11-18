@@ -183,6 +183,35 @@ export default function PageEditor({ mode, initialPage }: PageEditorProps) {
           {/* Actions */}
           <div style={{ display: 'flex', gap: 8 }}>
             <button
+              onClick={() => router.push('/admin')}
+              style={{
+                padding: '8px 20px',
+                fontSize: 14,
+                color: '#666',
+                background: '#fff',
+                border: '1px solid #d0c0a0',
+                borderRadius: 6,
+                cursor: 'pointer',
+              }}
+            >
+              ← Dashboard
+            </button>
+            <button
+              onClick={() => router.push('/')}
+              style={{
+                padding: '8px 20px',
+                fontSize: 14,
+                fontWeight: 500,
+                color: '#6b5d4f',
+                background: '#fff',
+                border: '1px solid #6b5d4f',
+                borderRadius: 6,
+                cursor: 'pointer',
+              }}
+            >
+              👁️ View Gallery
+            </button>
+            <button
               onClick={handleCancel}
               disabled={saving}
               style={{
@@ -219,7 +248,7 @@ export default function PageEditor({ mode, initialPage }: PageEditorProps) {
 
       {/* Light Table Editor (with top padding for header) */}
       <div style={{ paddingTop: 56, width: '100%', height: '100%' }}>
-        <LightTableApp />
+        <LightTableApp isAdmin={true} />
       </div>
     </div>
   );

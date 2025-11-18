@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 import type { ScrapbookPage } from '@/lib/db';
 
 type PublicGalleryProps = {
@@ -9,6 +10,13 @@ type PublicGalleryProps = {
 
 export default function PublicGallery({ pages }: PublicGalleryProps) {
   const router = useRouter();
+
+  // Redirect to single page if only one exists
+  useEffect(() => {
+    if (pages.length === 1) {
+      router.push(`/view/${pages[0].slug}`);
+    }
+  }, [pages, router]);
 
   if (pages.length === 0) {
     return (
@@ -41,9 +49,8 @@ export default function PublicGallery({ pages }: PublicGalleryProps) {
     );
   }
 
-  // If there's only one published page, redirect directly to it
+  // If there's only one published page, show loading while redirecting
   if (pages.length === 1) {
-    router.push(`/view/${pages[0].slug}`);
     return (
       <div
         style={{
