@@ -266,7 +266,14 @@ export default function PageEditor({ mode, initialPage }: PageEditorProps) {
       </div>
 
       {/* Light Table Editor (with top padding for header) */}
-      <div style={{ paddingTop: 56, width: '100%', height: '100%' }}>
+      <div style={{
+        position: 'absolute',
+        top: 130,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        width: '100%',
+      }}>
         <LightTableApp isAdmin={true} />
       </div>
     </div>

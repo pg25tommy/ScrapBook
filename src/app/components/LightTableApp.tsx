@@ -256,11 +256,9 @@ export default function LightTableApp({ isAdmin = false }: LightTableAppProps) {
           setEditText(currentState.slot.backText || '');
           setIsEditingBack(true);
           setTimeout(() => { isOpeningEditor.current = false; }, 500);
-        } else if (!currentState.isFlipped && isAdmin) {
-          // Admin: clicking front frame opens upload dialog
-          handleUploadClick();
         }
-        // Non-admin: clicking frame does nothing (read-only, use double-click to flip)
+        // Removed aggressive click-to-upload behavior
+        // Uploads now only happen when clicking the "Upload Image" button in toolbar
       },
       onSlotPositionChange: (index, x, y) => {
         // Update slot position in store when user drags a frame
@@ -462,7 +460,7 @@ export default function LightTableApp({ isAdmin = false }: LightTableAppProps) {
         className={`toolbar-container ${isMobileMenuOpen ? 'mobile-menu-open' : ''}`}
         style={{
           position: 'fixed',
-          top: isAdmin ? 68 : 12,
+          top: isAdmin ? 140 : 12,
           left: '50%',
           transform: 'translateX(-50%) translateZ(0)',
           zIndex: 2950,
@@ -472,8 +470,6 @@ export default function LightTableApp({ isAdmin = false }: LightTableAppProps) {
           willChange: 'transform',
           maxWidth: 'calc(100vw - 24px)',
           justifyContent: 'center',
-          // Mobile drawer styles (overridden on desktop)
-          transition: 'transform 250ms ease-out',
         }}
       >
         {/* Upload Image (Admin only) */}
@@ -853,7 +849,7 @@ export default function LightTableApp({ isAdmin = false }: LightTableAppProps) {
         {isFlipped
           ? '📝 Double-click frame to edit text • Click "Show Front" to flip back'
           : isAdmin
-          ? '📤 Click frame to upload • Scroll to zoom • Drag to pan • Click "Flip Over" to add notes'
+          ? '🖼️ Scroll to zoom • Drag to pan • Drag frame to reposition • Click "Flip Over" to add notes'
           : '🖼️ Scroll to zoom • Drag to pan • Click "Flip Over" to add notes'}
       </div>
     </div>

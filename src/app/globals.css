@@ -194,6 +194,8 @@ body {
 }
 
 /* Hamburger Menu - Mobile/Desktop Behavior */
+
+/* Mobile styles (<= 768px) */
 @media (max-width: 768px) {
   /* Show hamburger button on mobile */
   .hamburger-menu-btn {
@@ -221,6 +223,7 @@ body {
     box-shadow: -4px 0 16px rgba(0, 0, 0, 0.15);
     overflow-y: auto;
     gap: 8px !important;
+    transition: transform 250ms ease-out;
   }
 
   /* Slide in when menu is open */
@@ -242,13 +245,20 @@ body {
   }
 }
 
-/* Desktop - hide hamburger, show toolbar normally */
+/* Desktop styles (> 768px) */
 @media (min-width: 769px) {
+  /* Hide hamburger and overlay on desktop */
   .hamburger-menu-btn {
     display: none !important;
   }
 
   .mobile-menu-overlay {
     display: none !important;
+  }
+
+  /* Ensure toolbar uses inline styles on desktop (no mobile overrides) */
+  .toolbar-container {
+    /* No overrides - inline styles apply */
+    transition: none; /* No transition on desktop */
   }
 }
