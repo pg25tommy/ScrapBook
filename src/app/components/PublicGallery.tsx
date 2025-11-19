@@ -142,9 +142,9 @@ export default function PublicGallery({ pages }: PublicGalleryProps) {
                   boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
                 }}
               >
-                {page.slot_data.content?.kind === 'image' ? (
+                {page.slot_data[0]?.content?.kind === 'image' ? (
                   <img
-                    src={page.slot_data.content.src}
+                    src={page.slot_data[0].content.src}
                     alt={page.title}
                     style={{
                       width: '100%',
