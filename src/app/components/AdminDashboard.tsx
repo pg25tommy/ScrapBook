@@ -61,14 +61,33 @@ export default function AdminDashboard({ initialPages }: AdminDashboardProps) {
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f5f1e8', padding: '40px 20px' }}>
+    <div style={{ minHeight: '100vh', background: '#f5f1e8', padding: 'clamp(20px, 4vw, 40px) clamp(12px, 3vw, 20px)' }}>
       <div style={{ maxWidth: 1200, margin: '0 auto' }}>
         {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
-          <h1 style={{ fontSize: 32, fontFamily: 'Georgia, serif', color: '#2a2a2a', margin: 0 }}>
+        <div style={{
+          display: 'flex',
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          gap: 16,
+          marginBottom: 'clamp(20px, 4vw, 32px)',
+        }}>
+          <h1 style={{
+            fontSize: 'clamp(24px, 5vw, 32px)',
+            fontFamily: 'Georgia, serif',
+            color: '#2a2a2a',
+            margin: 0,
+            flex: '1 1 auto',
+          }}>
             Admin Dashboard
           </h1>
-          <div style={{ display: 'flex', gap: 12 }}>
+          <div style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 'clamp(8px, 2vw, 12px)',
+            justifyContent: 'flex-end',
+          }}>
             <button
               onClick={() => router.push('/')}
               className="toolbar-btn"
@@ -154,17 +173,28 @@ export default function AdminDashboard({ initialPages }: AdminDashboardProps) {
                 key={page.id}
                 style={{
                   background: '#fff',
-                  padding: 24,
+                  padding: 'clamp(16px, 3vw, 24px)',
                   borderRadius: 12,
                   boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
                   display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
+                  flexDirection: 'column',
+                  gap: 16,
                 }}
               >
                 <div style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-                    <h3 style={{ fontSize: 20, fontFamily: 'Georgia, serif', color: '#2a2a2a', margin: 0 }}>
+                  <div style={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    alignItems: 'center',
+                    gap: 12,
+                    marginBottom: 8,
+                  }}>
+                    <h3 style={{
+                      fontSize: 'clamp(16px, 3.5vw, 20px)',
+                      fontFamily: 'Georgia, serif',
+                      color: '#2a2a2a',
+                      margin: 0,
+                    }}>
                       {page.title}
                     </h3>
                     <span
@@ -180,15 +210,28 @@ export default function AdminDashboard({ initialPages }: AdminDashboardProps) {
                       {page.published ? 'Published' : 'Draft'}
                     </span>
                   </div>
-                  <p style={{ fontSize: 14, color: '#666', margin: 0 }}>
+                  <p style={{
+                    fontSize: 'clamp(12px, 2.5vw, 14px)',
+                    color: '#666',
+                    margin: 0,
+                  }}>
                     Slug: /{page.slug}
                   </p>
-                  <p style={{ fontSize: 13, color: '#999', margin: '4px 0 0 0' }}>
+                  <p style={{
+                    fontSize: 'clamp(11px, 2.5vw, 13px)',
+                    color: '#999',
+                    margin: '4px 0 0 0',
+                  }}>
                     Updated: {new Date(page.updated_at).toLocaleDateString()}
                   </p>
                 </div>
 
-                <div style={{ display: 'flex', gap: 8 }}>
+                <div style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: 8,
+                  justifyContent: 'flex-start',
+                }}>
                   <button
                     onClick={() => router.push(`/admin/pages/${page.id}`)}
                     disabled={loading === page.id}

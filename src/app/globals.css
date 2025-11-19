@@ -137,7 +137,7 @@ body {
 
 /* ---------------- Pixi Canvas Hygiene ---------------- */
 
-/* Ensure Pixi’s canvas doesn’t overwrite background */
+/* Ensure Pixi's canvas doesn't overwrite background */
 canvas {
   display: block;
   margin: 0;
@@ -146,3 +146,49 @@ canvas {
 }
 
 canvas:focus { outline: none; }
+
+/* ---------------- Mobile & Touch Optimizations ---------------- */
+
+/* Prevent touch callouts and selection on iOS */
+* {
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+  -webkit-touch-callout: none;
+}
+
+/* Allow text selection in editable areas */
+input, textarea {
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  user-select: text;
+}
+
+/* Smooth scrolling on iOS */
+html {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Prevent pull-to-refresh and overscroll on mobile */
+body {
+  overscroll-behavior: none;
+}
+
+/* Touch-friendly button sizing (min 44x44px per Apple HIG) */
+.toolbar-btn {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Responsive breakpoints */
+@media (max-width: 768px) {
+  .toolbar-btn {
+    font-size: 11px;
+    padding: 6px 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .toolbar-btn {
+    font-size: 10px;
+    padding: 6px 8px;
+  }
+}

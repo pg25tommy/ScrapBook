@@ -121,7 +121,7 @@ export default function PageEditor({ mode, initialPage }: PageEditorProps) {
           zIndex: 2000,
           background: 'rgba(255, 255, 255, 0.98)',
           borderBottom: '1px solid #d0c0a0',
-          padding: '12px 20px',
+          padding: 'clamp(8px, 2vw, 12px) clamp(12px, 3vw, 20px)',
           boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
         }}
       >
@@ -130,14 +130,21 @@ export default function PageEditor({ mode, initialPage }: PageEditorProps) {
             maxWidth: 1400,
             margin: '0 auto',
             display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 20,
+            flexDirection: 'column',
+            gap: 'clamp(8px, 2vw, 12px)',
           }}
         >
           {/* Page Metadata */}
-          <div style={{ display: 'flex', gap: 16, flex: 1 }}>
-            <div style={{ flex: 1, maxWidth: 300 }}>
+          <div style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 'clamp(8px, 2vw, 16px)',
+            width: '100%',
+          }}>
+            <div style={{
+              flex: '1 1 auto',
+              minWidth: 'min(100%, 200px)',
+            }}>
               <input
                 type="text"
                 placeholder="Page Title"
@@ -146,7 +153,7 @@ export default function PageEditor({ mode, initialPage }: PageEditorProps) {
                 style={{
                   width: '100%',
                   padding: '8px 12px',
-                  fontSize: 14,
+                  fontSize: 'clamp(12px, 2.5vw, 14px)',
                   fontFamily: 'Georgia, serif',
                   border: '1px solid #d0c0a0',
                   borderRadius: 6,
@@ -154,7 +161,10 @@ export default function PageEditor({ mode, initialPage }: PageEditorProps) {
                 }}
               />
             </div>
-            <div style={{ flex: 1, maxWidth: 300 }}>
+            <div style={{
+              flex: '1 1 auto',
+              minWidth: 'min(100%, 200px)',
+            }}>
               <input
                 type="text"
                 placeholder="slug-for-url"
@@ -163,7 +173,7 @@ export default function PageEditor({ mode, initialPage }: PageEditorProps) {
                 style={{
                   width: '100%',
                   padding: '8px 12px',
-                  fontSize: 14,
+                  fontSize: 'clamp(12px, 2.5vw, 14px)',
                   fontFamily: 'monospace',
                   border: '1px solid #d0c0a0',
                   borderRadius: 6,
@@ -175,13 +185,22 @@ export default function PageEditor({ mode, initialPage }: PageEditorProps) {
 
           {/* Error Message */}
           {error && (
-            <div style={{ color: '#dc3545', fontSize: 14, fontWeight: 500 }}>
+            <div style={{
+              color: '#dc3545',
+              fontSize: 'clamp(12px, 2.5vw, 14px)',
+              fontWeight: 500,
+            }}>
               {error}
             </div>
           )}
 
           {/* Actions */}
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 'clamp(4px, 1.5vw, 8px)',
+            justifyContent: 'flex-end',
+          }}>
             <button
               onClick={() => router.push('/admin')}
               style={{

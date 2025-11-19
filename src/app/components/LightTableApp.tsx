@@ -410,8 +410,17 @@ export default function LightTableApp({ isAdmin = false }: LightTableAppProps) {
       <div
         className="toolbar-fixed"
         style={{
-          position: 'fixed', top: isAdmin ? 68 : 12, left: 12, zIndex: 2100,
-          display: 'flex', gap: 8, transform: 'translateZ(0)', willChange: 'transform'
+          position: 'fixed',
+          top: isAdmin ? 68 : 12,
+          left: '50%',
+          transform: 'translateX(-50%) translateZ(0)',
+          zIndex: 2100,
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: 'clamp(4px, 1vw, 8px)',
+          willChange: 'transform',
+          maxWidth: 'calc(100vw - 24px)',
+          justifyContent: 'center',
         }}
       >
         {/* Upload Image (Admin only) */}
@@ -449,12 +458,13 @@ export default function LightTableApp({ isAdmin = false }: LightTableAppProps) {
             {showArchiveDropdown && photoArchive.length > 0 && (
               <div
                 style={{
-                  position: 'absolute',
-                  top: '100%',
-                  left: 0,
-                  marginTop: 8,
-                  width: 320,
-                  maxHeight: 400,
+                  position: 'fixed',
+                  top: '50%',
+                  left: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  marginTop: 0,
+                  width: 'min(320px, calc(100vw - 32px))',
+                  maxHeight: 'min(400px, calc(100vh - 100px))',
                   overflowY: 'auto',
                   background: 'rgba(255, 255, 255, 0.98)',
                   border: '2px solid #c9b89a',
@@ -710,12 +720,14 @@ export default function LightTableApp({ isAdmin = false }: LightTableAppProps) {
             left: '50%',
             transform: 'translate(-50%, -50%)',
             zIndex: 2000,
-            width: 480,
+            width: 'min(480px, calc(100vw - 32px))',
+            maxHeight: 'calc(100vh - 32px)',
+            overflowY: 'auto',
             background: 'rgba(255,255,248,0.98)',
             border: '2px solid #c9b89a',
             borderRadius: 8,
             boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
-            padding: 24,
+            padding: 'clamp(16px, 4vw, 24px)',
           }}
         >
           <h3 style={{
@@ -770,9 +782,20 @@ export default function LightTableApp({ isAdmin = false }: LightTableAppProps) {
 
       {/* bottom hint */}
       <div style={{
-        position: 'fixed', left: '50%', bottom: 12, transform: 'translate(-50%,0) translateZ(0)',
-        willChange: 'transform', zIndex: 1000, fontSize: 12, padding: '6px 12px', borderRadius: 9999,
-        background: 'rgba(255,255,255,0.85)', boxShadow: '0 2px 8px rgba(0,0,0,0.12)', whiteSpace: 'nowrap',
+        position: 'fixed',
+        left: '50%',
+        bottom: 12,
+        transform: 'translate(-50%,0) translateZ(0)',
+        willChange: 'transform',
+        zIndex: 1000,
+        fontSize: 'clamp(10px, 2vw, 12px)',
+        padding: '6px 12px',
+        borderRadius: 9999,
+        background: 'rgba(255,255,255,0.85)',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+        maxWidth: 'calc(100vw - 24px)',
+        textAlign: 'center',
+        lineHeight: 1.3,
       }}>
         {isFlipped
           ? '📝 Double-click frame to edit text • Click "Show Front" to flip back'

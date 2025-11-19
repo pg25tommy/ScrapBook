@@ -47,13 +47,14 @@ function LoginForm() {
         alignItems: 'center',
         justifyContent: 'center',
         background: '#f5f1e8',
+        padding: '20px',
       }}
     >
       <div
         style={{
           width: '100%',
           maxWidth: 400,
-          padding: 40,
+          padding: 'clamp(24px, 5vw, 40px)',
           background: '#ffffff',
           borderRadius: 12,
           boxShadow: '0 4px 16px rgba(0,0,0,0.1)',
@@ -61,7 +62,7 @@ function LoginForm() {
       >
         <h1
           style={{
-            fontSize: 24,
+            fontSize: 'clamp(20px, 4vw, 24px)',
             fontFamily: 'Georgia, serif',
             marginBottom: 8,
             color: '#2a2a2a',
@@ -72,7 +73,7 @@ function LoginForm() {
         </h1>
         <p
           style={{
-            fontSize: 14,
+            fontSize: 'clamp(12px, 2.5vw, 14px)',
             color: '#666',
             marginBottom: 24,
             textAlign: 'center',
@@ -88,7 +89,7 @@ function LoginForm() {
               style={{
                 display: 'block',
                 marginBottom: 6,
-                fontSize: 14,
+                fontSize: 'clamp(12px, 2.5vw, 14px)',
                 fontWeight: 500,
                 color: '#2a2a2a',
               }}
@@ -104,7 +105,7 @@ function LoginForm() {
               style={{
                 width: '100%',
                 padding: '10px 12px',
-                fontSize: 14,
+                fontSize: 'clamp(14px, 3vw, 16px)',
                 border: '1px solid #d0c0a0',
                 borderRadius: 6,
                 outline: 'none',
@@ -121,7 +122,7 @@ function LoginForm() {
               style={{
                 display: 'block',
                 marginBottom: 6,
-                fontSize: 14,
+                fontSize: 'clamp(12px, 2.5vw, 14px)',
                 fontWeight: 500,
                 color: '#2a2a2a',
               }}
@@ -137,7 +138,7 @@ function LoginForm() {
               style={{
                 width: '100%',
                 padding: '10px 12px',
-                fontSize: 14,
+                fontSize: 'clamp(14px, 3vw, 16px)',
                 border: '1px solid #d0c0a0',
                 borderRadius: 6,
                 outline: 'none',

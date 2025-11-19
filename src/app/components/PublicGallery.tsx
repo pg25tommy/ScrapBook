@@ -27,13 +27,13 @@ export default function PublicGallery({ pages }: PublicGalleryProps) {
           alignItems: 'center',
           justifyContent: 'center',
           background: '#f5f1e8',
-          padding: 40,
+          padding: '20px',
         }}
       >
         <div style={{ textAlign: 'center', maxWidth: 500 }}>
           <h1
             style={{
-              fontSize: 36,
+              fontSize: 'clamp(24px, 5vw, 36px)',
               fontFamily: 'Georgia, serif',
               color: '#2a2a2a',
               marginBottom: 16,
@@ -41,7 +41,7 @@ export default function PublicGallery({ pages }: PublicGalleryProps) {
           >
             No Pages Yet
           </h1>
-          <p style={{ fontSize: 18, color: '#666', lineHeight: 1.6 }}>
+          <p style={{ fontSize: 'clamp(14px, 3vw, 18px)', color: '#666', lineHeight: 1.6 }}>
             Check back soon for beautiful memories and stories.
           </p>
         </div>
@@ -72,13 +72,13 @@ export default function PublicGallery({ pages }: PublicGalleryProps) {
       style={{
         minHeight: '100vh',
         background: '#f5f1e8',
-        padding: '60px 40px',
+        padding: 'clamp(20px, 5vw, 60px) clamp(16px, 4vw, 40px)',
       }}
     >
       <div style={{ maxWidth: 1200, margin: '0 auto' }}>
         <h1
           style={{
-            fontSize: 42,
+            fontSize: 'clamp(28px, 6vw, 42px)',
             fontFamily: 'Georgia, serif',
             color: '#2a2a2a',
             marginBottom: 12,
@@ -89,9 +89,9 @@ export default function PublicGallery({ pages }: PublicGalleryProps) {
         </h1>
         <p
           style={{
-            fontSize: 18,
+            fontSize: 'clamp(14px, 3vw, 18px)',
             color: '#666',
-            marginBottom: 48,
+            marginBottom: 'clamp(24px, 4vw, 48px)',
             textAlign: 'center',
           }}
         >
@@ -101,8 +101,8 @@ export default function PublicGallery({ pages }: PublicGalleryProps) {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-            gap: 32,
+            gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 280px), 1fr))',
+            gap: 'clamp(16px, 3vw, 32px)',
           }}
         >
           {pages.map((page) => (
@@ -112,7 +112,7 @@ export default function PublicGallery({ pages }: PublicGalleryProps) {
               style={{
                 background: '#fff',
                 borderRadius: 12,
-                padding: 32,
+                padding: 'clamp(16px, 4vw, 32px)',
                 boxShadow: '0 4px 16px rgba(0,0,0,0.1)',
                 cursor: 'pointer',
                 transition: 'transform 0.2s, box-shadow 0.2s',
@@ -159,7 +159,7 @@ export default function PublicGallery({ pages }: PublicGalleryProps) {
 
               <h3
                 style={{
-                  fontSize: 24,
+                  fontSize: 'clamp(18px, 4vw, 24px)',
                   fontFamily: 'Georgia, serif',
                   color: '#2a2a2a',
                   marginBottom: 8,
@@ -168,7 +168,7 @@ export default function PublicGallery({ pages }: PublicGalleryProps) {
                 {page.title}
               </h3>
 
-              <p style={{ fontSize: 14, color: '#999', margin: 0 }}>
+              <p style={{ fontSize: 'clamp(12px, 2.5vw, 14px)', color: '#999', margin: 0 }}>
                 Updated {new Date(page.updated_at).toLocaleDateString()}
               </p>
             </div>
