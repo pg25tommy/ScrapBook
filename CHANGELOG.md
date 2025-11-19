@@ -6,6 +6,114 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.6.1] - 2025-11-19
+
+### Added - Mobile & iOS Responsiveness
+
+#### Comprehensive Mobile Optimization
+**What:** Full responsive design implementation for mobile devices and iOS
+**Why:** Users needed proper mobile experience for viewing and managing scrapbooks on phones and tablets
+
+- **Viewport & iOS Meta Tags**
+  - Added proper viewport configuration with iOS safe area support
+  - Set `viewport-fit=cover` for iOS notch/dynamic island handling
+  - Added Apple Web App meta tags for better iOS experience
+  - Disabled automatic phone number detection
+  - **Why**: iOS Safari requires specific viewport and meta tag configuration
+
+- **Touch-Friendly CSS Enhancements**
+  - Removed tap highlight colors for iOS
+  - Prevented pull-to-refresh and overscroll behavior
+  - Implemented smooth scrolling for touch devices
+  - Ensured minimum 44x44px touch targets (Apple HIG compliance)
+  - **Why**: Touch interfaces require larger targets and different interaction patterns
+
+- **Responsive Typography**
+  - Used `clamp()` for fluid font scaling across all components
+  - Typography scales smoothly from mobile (320px) to desktop (1920px+)
+  - Maintains readability at all viewport sizes
+  - **Why**: Fixed font sizes break on small screens or look tiny on large ones
+
+- **Adaptive Layouts**
+  - All components now use flexible layouts with `flexbox` and `grid`
+  - Responsive padding and spacing using `clamp()`
+  - Elements stack vertically on mobile, spread horizontally on desktop
+  - **Why**: Different screen sizes require different content arrangements
+
+#### Component-Specific Updates
+
+**PublicGallery** ([PublicGallery.tsx](src/app/components/PublicGallery.tsx))
+- Grid: `minmax(min(100%, 280px), 1fr)` for proper mobile wrapping
+- Responsive padding: `clamp(20px, 5vw, 60px)`
+- Card padding: `clamp(16px, 4vw, 32px)`
+- All text uses fluid typography with `clamp()`
+- **Why**: Gallery needs to work on small phone screens and large desktops
+
+**LightTableApp** ([LightTableApp.tsx](src/app/components/LightTableApp.tsx))
+- Centered, wrapping toolbar: `flexWrap: 'wrap'` with centered alignment
+- Text editor modal: `min(480px, calc(100vw - 32px))`
+- Archive dropdown: repositioned as centered modal on mobile
+- Bottom hint: `maxWidth: 'calc(100vw - 24px)'` with wrapping
+- **Why**: Toolbar with 10+ buttons needs to wrap gracefully on mobile
+
+**AdminDashboard** ([AdminDashboard.tsx](src/app/components/AdminDashboard.tsx))
+- Header buttons wrap instead of overflow
+- Page cards stack elements vertically on mobile
+- Responsive button groups with `flexWrap: 'wrap'`
+- All text scales with viewport
+- **Why**: Admin interface must be usable on tablets
+
+**PageEditor** ([PageEditor.tsx](src/app/components/PageEditor.tsx))
+- Input fields stack vertically on mobile (vs side-by-side on desktop)
+- Header buttons wrap to multiple rows on small screens
+- Responsive form element sizing
+- **Why**: Page editing on mobile requires stacked layout
+
+**Login Page** ([login/page.tsx](src/app/admin/login/page.tsx))
+- Responsive container with `clamp()` padding
+- Touch-friendly input sizing: `clamp(14px, 3vw, 16px)`
+- Proper mobile padding around form
+- **Why**: Login must work on all devices
+
+### Technical Improvements
+
+#### CSS Enhancements
+- Added mobile-specific CSS rules in `globals.css`
+- Responsive breakpoints at 768px and 480px for toolbar buttons
+- Touch-friendly button sizing with media queries
+- **Why**: Progressive enhancement for different device capabilities
+
+#### Layout Improvements
+- All fixed widths replaced with `min()`, `max()`, or `clamp()`
+- Flexible spacing using viewport units
+- No horizontal scrolling on any screen size
+- **Why**: Prevents layout breaking on small screens
+
+### Files Modified
+
+**Configuration**:
+- `src/app/layout.tsx` - Viewport and iOS meta tags
+- `src/app/globals.css` - Mobile CSS rules and touch optimizations
+
+**Components**:
+- `src/app/components/PublicGallery.tsx` - Responsive grid and typography
+- `src/app/components/LightTableApp.tsx` - Wrapping toolbar, responsive modals
+- `src/app/components/AdminDashboard.tsx` - Flexible layout, wrapping buttons
+- `src/app/components/PageEditor.tsx` - Stacking inputs, wrapping buttons
+- `src/app/admin/login/page.tsx` - Responsive form layout
+
+### Browser Support
+
+**Tested and optimized for**:
+- iOS Safari (iPhone and iPad)
+- Android Chrome
+- Desktop Chrome, Firefox, Safari, Edge
+- Viewport sizes from 320px to 3840px
+
+**Why this matters**: Mobile traffic often exceeds 50% for content sites
+
+---
+
 ## [0.6.0] - 2025-11-19
 
 ### Added - Multi-Slot Pages & Branding Update
