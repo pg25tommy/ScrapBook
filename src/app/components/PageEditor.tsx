@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import type { ScrapbookPage } from '@/lib/db';
 import { useLightTableStore } from '@/state/useLightTableStore';
@@ -19,7 +19,14 @@ export default function PageEditor({ mode, initialPage }: PageEditorProps) {
   const [error, setError] = useState('');
 
   // Get all slots from store (for multi-slot pages)
-  const { slots } = useLightTableStore();
+  const { slots, resetStore } = useLightTableStore();
+
+  // Reset store when creating a new page
+  useEffect(() => {
+    if (mode === 'create') {
+      resetStore();
+    }
+  }, [mode, resetStore]);
 
   const handleSave = async () => {
     setError('');

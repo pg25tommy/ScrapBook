@@ -90,6 +90,7 @@ type LTState = {
 
   /* Persistence */
   loadFromStorage: () => void;
+  resetStore: () => void;
 };
 
 export const useLightTableStore = create<LTState>((set, get) => ({
@@ -240,5 +241,17 @@ export const useLightTableStore = create<LTState>((set, get) => ({
     if (savedSlot) {
       set({ slots: [savedSlot], currentSlotIndex: 0 });
     }
+  },
+
+  resetStore: () => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(STORAGE_KEY);
+    }
+    set({
+      slots: [{ ...ONE_SLOT, id: uid() }],
+      currentSlotIndex: 0,
+      loupeEnabled: false,
+      isFlipped: false,
+    });
   },
 }));

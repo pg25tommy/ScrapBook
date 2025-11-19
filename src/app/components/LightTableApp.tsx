@@ -244,16 +244,18 @@ export default function LightTableApp({ isAdmin = false }: LightTableAppProps) {
     if (!container || engineRef.current) return;
 
     const engine = new LightTableEngine({
-      onRequestFill: async () => {
+      onRequestFill: async (slotIndex: number) => {
         // Prevent multiple rapid fire opens
         if (isOpeningEditor.current) return;
 
-        // Get current state dynamically instead of using closure
+        // Get the specific slot that was clicked using the slotIndex
         const currentState = useLightTableStore.getState();
+        const clickedSlot = currentState.slots[slotIndex];
+
         if (currentState.isFlipped && isAdmin) {
           // Double-click on back to edit text (ADMIN ONLY)
           isOpeningEditor.current = true;
-          setEditText(currentState.slot.backText || '');
+          setEditText(clickedSlot?.backText || '');
           setIsEditingBack(true);
           setTimeout(() => { isOpeningEditor.current = false; }, 500);
         }
@@ -264,7 +266,7 @@ export default function LightTableApp({ isAdmin = false }: LightTableAppProps) {
         // Update slot position in store when user drags a frame
         updateSlotPosition(index, x, y);
       },
-      safeInsets: { top: 84, left: 12, right: 12, bottom: 56 },
+      safeInsets: { top: isAdmin ? 84 : 136, left: 12, right: 12, bottom: 56 },
     });
     engineRef.current = engine;
 
@@ -414,7 +416,7 @@ export default function LightTableApp({ isAdmin = false }: LightTableAppProps) {
         title="Toggle menu"
         style={{
           position: 'fixed',
-          top: isAdmin ? 76 : 20,
+          top: isAdmin ? 76 : 76,
           right: 20,
           zIndex: 3000,
           width: 48,
@@ -460,7 +462,7 @@ export default function LightTableApp({ isAdmin = false }: LightTableAppProps) {
         className={`toolbar-container ${isMobileMenuOpen ? 'mobile-menu-open' : ''}`}
         style={{
           position: 'fixed',
-          top: isAdmin ? 140 : 12,
+          top: isAdmin ? 140 : 76,
           left: '50%',
           transform: 'translateX(-50%) translateZ(0)',
           zIndex: 2950,

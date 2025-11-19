@@ -5,7 +5,7 @@ import { getTapeTexture } from './tapeTextures';
 import type { Slot, SlotContent } from '../../state/useLightTableStore';
 
 type EngineOpts = {
-  onRequestFill?: () => Promise<void> | void;
+  onRequestFill?: (slotIndex: number) => Promise<void> | void;
   onSlotPositionChange?: (index: number, x: number, y: number) => void;
   safeInsets?: { top: number; left: number; right: number; bottom: number };
 };
@@ -19,7 +19,7 @@ export class LightTableEngine {
   view = { x: 0, y: 0, scale: 1 };
 
   private resizeTimer?: number;
-  private onRequestFill?: () => Promise<void> | void;
+  private onRequestFill?: (slotIndex: number) => Promise<void> | void;
   private onSlotPositionChange?: (index: number, x: number, y: number) => void;
   private currentSlot?: Slot;
   private currentSlots: Slot[] = [];
@@ -144,7 +144,7 @@ export class LightTableEngine {
       const slot = slots[i];
       const isSelected = i === selectedIndex;
 
-      const frame = this.buildFrame(slot, isSelected);
+      const frame = this.buildFrame(slot, isSelected, i);
       frame.position.set(slot.x, slot.y);
 
       // Make each frame draggable
@@ -207,7 +207,7 @@ export class LightTableEngine {
     // Check if this is a newspaper clipping (text content)
     const isNewspaperClipping = slot.content?.kind === 'text';
 
-    const frame = this.buildFrame(slot);
+    const frame = this.buildFrame(slot, false, this.selectedSlotIndex);
     frame.position.set(slot.x, slot.y);
     this.world.addChild(frame);
 
@@ -362,7 +362,7 @@ export class LightTableEngine {
     }
   }
 
-  private buildFrame(slot: Slot, isSelected: boolean = false): PIXI.Container {
+  private buildFrame(slot: Slot, isSelected: boolean = false, slotIndex: number = 0): PIXI.Container {
     const cont = new PIXI.Container();
     (cont as any).sortableChildren = true;
 
@@ -395,7 +395,7 @@ export class LightTableEngine {
       (cont as any).eventMode = 'static';
       (cont as any).interactive = true;
       (cont as any).cursor = 'pointer';
-      (cont as any).onpointertap = () => this.onRequestFill?.();
+      (cont as any).onpointertap = () => this.onRequestFill?.(slotIndex);
 
       return cont;
     }
@@ -457,7 +457,7 @@ export class LightTableEngine {
     (cont as any).eventMode = 'static';
     (cont as any).interactive = true;
     (cont as any).cursor = 'pointer';
-    (cont as any).onpointertap = () => this.onRequestFill?.();
+    (cont as any).onpointertap = () => this.onRequestFill?.(slotIndex);
 
     // Add selection indicator if selected
     if (isSelected) {
