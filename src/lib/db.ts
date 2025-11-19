@@ -5,7 +5,7 @@ export type ScrapbookPage = {
   id: number;
   title: string;
   slug: string;
-  slot_data: Slot;
+  slot_data: Slot[];  // Changed to array to support multiple slots
   published: boolean;
   created_at: string;
   updated_at: string;
@@ -126,7 +126,7 @@ export async function getPublishedPageBySlug(slug: string): Promise<ScrapbookPag
 export async function createPage(
   title: string,
   slug: string,
-  slotData: Slot
+  slotData: Slot[]
 ): Promise<ScrapbookPage> {
   if (!isPostgresConfigured()) {
     const now = new Date().toISOString();
@@ -165,7 +165,7 @@ export async function updatePage(
   id: number,
   title: string,
   slug: string,
-  slotData: Slot
+  slotData: Slot[]
 ): Promise<ScrapbookPage> {
   if (!isPostgresConfigured()) {
     const existing = inMemoryPages.get(id);

@@ -6,6 +6,7 @@ import type { Slot, SlotContent } from '../../state/useLightTableStore';
 
 type EngineOpts = {
   onRequestFill?: () => Promise<void> | void;
+  onSlotPositionChange?: (index: number, x: number, y: number) => void;
   safeInsets?: { top: number; left: number; right: number; bottom: number };
 };
 
@@ -19,13 +20,17 @@ export class LightTableEngine {
 
   private resizeTimer?: number;
   private onRequestFill?: () => Promise<void> | void;
+  private onSlotPositionChange?: (index: number, x: number, y: number) => void;
   private currentSlot?: Slot;
+  private currentSlots: Slot[] = [];
+  private selectedSlotIndex: number = 0;
   private safeInsets = { top: 84, left: 12, right: 12, bottom: 56 };
 
   private loupeEnabled = false;
   private mouseX = 0;
   private mouseY = 0;
   private isFlipped = false;
+  private isDraggingFrame = false;
 
   // Flip animation state (per DESIGN_SPEC.md §9: 150-250ms, ease-out)
   private isAnimatingFlip = false;
@@ -35,6 +40,7 @@ export class LightTableEngine {
 
   constructor(opts?: EngineOpts) {
     this.onRequestFill = opts?.onRequestFill;
+    this.onSlotPositionChange = opts?.onSlotPositionChange;
     if (opts?.safeInsets) this.safeInsets = opts.safeInsets;
   }
 
@@ -123,6 +129,73 @@ export class LightTableEngine {
     this.resetCamera();
   }
 
+  async setSlots(slots: Slot[], selectedIndex: number = 0) {
+    console.log('[Engine] setSlots called with:', slots, 'selectedIndex:', selectedIndex);
+    if (!this.world || !this.app) return;
+
+    this.currentSlots = slots;
+    this.selectedSlotIndex = selectedIndex;
+    this.currentSlot = slots[selectedIndex];
+
+    this.world.removeChildren();
+
+    // Render all slots simultaneously
+    for (let i = 0; i < slots.length; i++) {
+      const slot = slots[i];
+      const isSelected = i === selectedIndex;
+
+      const frame = this.buildFrame(slot, isSelected);
+      frame.position.set(slot.x, slot.y);
+
+      // Make each frame draggable
+      this.makeDraggable(frame, i);
+
+      this.world.addChild(frame);
+
+      // Check if this is a newspaper clipping (text content)
+      const isNewspaperClipping = slot.content?.kind === 'text';
+
+      // Newspaper clippings don't flip - they're single-sided
+      if (isNewspaperClipping) {
+        if (slot.content) {
+          try {
+            const node = await this.makeNewspaperContent(slot, slot.content);
+            node.zIndex = 4;
+            frame.addChild(node);
+          } catch (e) {
+            console.error('Failed to build newspaper clipping:', e);
+          }
+        }
+      } else if (this.isFlipped && isSelected) {
+        // Only flip the selected slot
+        const backContainer = new PIXI.Container();
+        const bg = this.makeBackgroundForFlipped(slot);
+        backContainer.addChild(bg);
+        const textContent = this.makeBackContent(slot);
+        backContainer.addChild(textContent);
+        backContainer.zIndex = 4;
+        frame.addChild(backContainer);
+      } else {
+        // Show the front with photo/content
+        if (slot.content) {
+          try {
+            const node = await this.makeContent(slot, slot.content);
+            this.maskIntoFrame(frame, node);
+          } catch (e) {
+            console.error('Failed to build slot content:', e);
+          }
+        } else {
+          const plus = new PIXI.Graphics();
+          plus.moveTo(0, -18).lineTo(0, 18);
+          plus.moveTo(-18, 0).lineTo(18, 0);
+          plus.stroke({ width: 2, color: 0xb8a896, alpha: 0.4 });
+          plus.zIndex = 4;
+          frame.addChild(plus);
+        }
+      }
+    }
+  }
+
   async setSlot(slot: Slot) {
     console.log('[Engine] setSlot called with:', slot);
     console.log('[Engine] isFlipped:', this.isFlipped);
@@ -130,6 +203,9 @@ export class LightTableEngine {
     this.currentSlot = slot;
 
     this.world.removeChildren();
+
+    // Check if this is a newspaper clipping (text content)
+    const isNewspaperClipping = slot.content?.kind === 'text';
 
     const frame = this.buildFrame(slot);
     frame.position.set(slot.x, slot.y);
@@ -147,10 +223,23 @@ export class LightTableEngine {
       frameWidth: slot.width,
       frameHeight: slot.height,
       appWidth: this.app.screen.width,
-      appHeight: this.app.screen.height
+      appHeight: this.app.screen.height,
+      isNewspaperClipping
     });
 
-    if (this.isFlipped) {
+    // Newspaper clippings don't flip - they're single-sided
+    if (isNewspaperClipping) {
+      console.log('[Engine] Rendering newspaper clipping');
+      if (slot.content) {
+        try {
+          const node = await this.makeNewspaperContent(slot, slot.content);
+          node.zIndex = 4;
+          frame.addChild(node);
+        } catch (e) {
+          console.error('Failed to build newspaper clipping:', e);
+        }
+      }
+    } else if (this.isFlipped) {
       // Show the back of the photo with text
       // Create container for both background and text
       const backContainer = new PIXI.Container();
@@ -199,7 +288,16 @@ export class LightTableEngine {
     }
   }
 
+  getIsDraggingFrame(): boolean {
+    return this.isDraggingFrame;
+  }
+
   setFlipped(flipped: boolean) {
+    // Newspaper clippings don't flip - they're single-sided
+    if (this.currentSlot?.content?.kind === 'text') {
+      return;
+    }
+
     // If already at target state, do nothing
     if (this.isFlipped === flipped && !this.isAnimatingFlip) {
       return;
@@ -236,15 +334,16 @@ export class LightTableEngine {
       // Switch content at midpoint (when scaleX = 0)
       if (this.isFlipped !== this.targetFlipped) {
         this.isFlipped = this.targetFlipped;
-        if (this.currentSlot) {
-          this.setSlot(this.currentSlot);
+        // Re-render all slots to maintain multi-slot pages
+        if (this.currentSlots.length > 0) {
+          this.setSlots(this.currentSlots, this.selectedSlotIndex);
         }
       }
     }
 
-    // Apply scale to all frame containers
+    // Apply scale to all frame containers (except newspaper clippings)
     this.world.children.forEach((child) => {
-      if (child instanceof PIXI.Container) {
+      if (child instanceof PIXI.Container && !(child as any).isNewspaperClipping) {
         child.scale.x = scaleX;
       }
     });
@@ -254,19 +353,54 @@ export class LightTableEngine {
       requestAnimationFrame(() => this.animateFlip());
     } else {
       this.isAnimatingFlip = false;
-      // Ensure final scale is exactly 1
+      // Ensure final scale is exactly 1 (except newspaper clippings)
       this.world.children.forEach((child) => {
-        if (child instanceof PIXI.Container) {
+        if (child instanceof PIXI.Container && !(child as any).isNewspaperClipping) {
           child.scale.x = 1;
         }
       });
     }
   }
 
-  private buildFrame(slot: Slot): PIXI.Container {
+  private buildFrame(slot: Slot, isSelected: boolean = false): PIXI.Container {
     const cont = new PIXI.Container();
     (cont as any).sortableChildren = true;
 
+    // Check if this is a newspaper clipping
+    const isNewspaperClipping = slot.content?.kind === 'text';
+    // Mark container so we can exclude it from flip animations
+    (cont as any).isNewspaperClipping = isNewspaperClipping;
+
+    if (isNewspaperClipping) {
+      // Simpler frame for newspaper clippings - just a shadow
+      const shadow = new PIXI.Graphics();
+      shadow.rect(-slot.width / 2, -slot.height / 2, slot.width, slot.height);
+      shadow.fill({ color: 0x2a231c, alpha: 0.2 });
+      shadow.position.set(3, 5);
+      const blur = new BlurFilter();
+      (blur as any).strength = 5;
+      (shadow as any).filters = [blur];
+      shadow.zIndex = 1;
+      cont.addChild(shadow);
+
+      // Add selection indicator if selected
+      if (isSelected) {
+        const selectionBorder = new PIXI.Graphics();
+        selectionBorder.rect(-slot.width / 2 - 4, -slot.height / 2 - 4, slot.width + 8, slot.height + 8);
+        selectionBorder.stroke({ width: 2, color: 0x4a9eff, alpha: 0.6 });
+        selectionBorder.zIndex = 10;
+        cont.addChild(selectionBorder);
+      }
+
+      (cont as any).eventMode = 'static';
+      (cont as any).interactive = true;
+      (cont as any).cursor = 'pointer';
+      (cont as any).onpointertap = () => this.onRequestFill?.();
+
+      return cont;
+    }
+
+    // Polaroid-style frame for images
     const border = 16;
     const bottomExtra = 28;
     const frameW = slot.width + border * 2;
@@ -324,6 +458,15 @@ export class LightTableEngine {
     (cont as any).interactive = true;
     (cont as any).cursor = 'pointer';
     (cont as any).onpointertap = () => this.onRequestFill?.();
+
+    // Add selection indicator if selected
+    if (isSelected) {
+      const selectionBorder = new PIXI.Graphics();
+      selectionBorder.roundRect(-frameW / 2 - 4, -frameH / 2 - 4, frameW + 8, frameH + 8, 10);
+      selectionBorder.stroke({ width: 3, color: 0x4a9eff, alpha: 0.7 });
+      selectionBorder.zIndex = 100;
+      cont.addChild(selectionBorder);
+    }
 
     (cont as any).__opening__ = opening;
     return cont;
@@ -480,6 +623,132 @@ export class LightTableEngine {
     t.position.set(0, -(bottomExtra / 2));
 
     return t;
+  }
+
+  private async makeNewspaperContent(slot: Slot, content: SlotContent): Promise<any> {
+    if (content.kind !== 'text') return new PIXI.Container();
+
+    const container = new PIXI.Container();
+
+    // Aged newspaper paper background with slightly irregular edges
+    const bg = new PIXI.Graphics();
+
+    // Create slightly torn/rough edge effect
+    const roughness = 3;
+    bg.moveTo(-slot.width / 2 + Math.random() * roughness, -slot.height / 2);
+
+    // Top edge (slight irregularity)
+    for (let x = -slot.width / 2; x < slot.width / 2; x += 15) {
+      bg.lineTo(x + Math.random() * roughness, -slot.height / 2 + Math.random() * roughness);
+    }
+    bg.lineTo(slot.width / 2, -slot.height / 2);
+
+    // Right edge
+    for (let y = -slot.height / 2; y < slot.height / 2; y += 15) {
+      bg.lineTo(slot.width / 2 + Math.random() * roughness, y);
+    }
+    bg.lineTo(slot.width / 2, slot.height / 2);
+
+    // Bottom edge
+    for (let x = slot.width / 2; x > -slot.width / 2; x -= 15) {
+      bg.lineTo(x, slot.height / 2 + Math.random() * roughness);
+    }
+    bg.lineTo(-slot.width / 2, slot.height / 2);
+
+    // Left edge
+    for (let y = slot.height / 2; y > -slot.height / 2; y -= 15) {
+      bg.lineTo(-slot.width / 2 + Math.random() * roughness, y);
+    }
+    bg.lineTo(-slot.width / 2, -slot.height / 2);
+
+    // Fill with aged newspaper color (yellowish/cream)
+    bg.fill({ color: 0xf4e8d0, alpha: 0.98 });
+
+    // Add subtle border to simulate ink
+    bg.stroke({ width: 1, color: 0xd4c4a8, alpha: 0.6 });
+
+    container.addChild(bg);
+
+    // Newspaper-style text
+    const text = content.text || 'Click to add text...';
+    const t = new PIXI.Text({
+      text: text,
+      style: {
+        fontFamily: 'Georgia, "Times New Roman", Times, serif',
+        fontSize: 16,
+        fill: 0x1a1a1a, // Nearly black ink
+        wordWrap: true,
+        wordWrapWidth: slot.width - 50,
+        lineHeight: 22,
+        letterSpacing: 0.2,
+        align: 'left',
+        fontStyle: 'normal',
+      }
+    });
+
+    t.anchor.set(0.5, 0.5);
+    t.position.set(0, 0);
+    container.addChild(t);
+
+    return container;
+  }
+
+  private makeDraggable(frame: PIXI.Container, slotIndex: number) {
+    let isDragging = false;
+    let dragStartX = 0;
+    let dragStartY = 0;
+    let frameStartX = 0;
+    let frameStartY = 0;
+
+    (frame as any).eventMode = 'static';
+    (frame as any).cursor = 'grab';
+
+    const onDragStart = (event: any) => {
+      isDragging = true;
+      this.isDraggingFrame = true;
+      (frame as any).cursor = 'grabbing';
+
+      const worldPos = event.global;
+      dragStartX = worldPos.x;
+      dragStartY = worldPos.y;
+      frameStartX = frame.x;
+      frameStartY = frame.y;
+
+      event.stopPropagation();
+    };
+
+    const onDragMove = (event: any) => {
+      if (!isDragging) return;
+
+      const worldPos = event.global;
+      const dx = (worldPos.x - dragStartX) / this.view.scale;
+      const dy = (worldPos.y - dragStartY) / this.view.scale;
+
+      frame.x = frameStartX + dx;
+      frame.y = frameStartY + dy;
+
+      event.stopPropagation();
+    };
+
+    const onDragEnd = (event: any) => {
+      if (!isDragging) return;
+
+      isDragging = false;
+      this.isDraggingFrame = false;
+      (frame as any).cursor = 'grab';
+
+      // Update the slot position in the store
+      if (this.onSlotPositionChange) {
+        this.onSlotPositionChange(slotIndex, frame.x, frame.y);
+      }
+
+      event.stopPropagation();
+    };
+
+    (frame as any).on('pointerdown', onDragStart);
+    (frame as any).on('pointermove', onDragMove);
+    (frame as any).on('pointerup', onDragEnd);
+    (frame as any).on('pointerupoutside', onDragEnd);
   }
 
   private clampView() {

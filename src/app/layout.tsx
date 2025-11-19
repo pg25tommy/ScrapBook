@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Light Table Scrapbook",
+  title: "SoftBound by Daniel",
   description: "A digital scrapbook with a vintage light table aesthetic",
 };
 

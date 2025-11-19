@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { put } from '@vercel/blob';
 import { requireAuth } from '@/lib/auth';
+import { writeFile, mkdir } from 'fs/promises';
+import path from 'path';
 
 export const runtime = 'nodejs';
+
+// Check if we're in production (Vercel) or local dev
+const isProduction = !!process.env.BLOB_READ_WRITE_TOKEN;
 
 export async function POST(req: NextRequest) {
   // Require authentication
@@ -47,20 +52,37 @@ export async function POST(req: NextRequest) {
       .toLowerCase();
     const filename = `${safeName}-${timestamp}.${ext}`;
 
-    // Upload to Vercel Blob
-    const blob = await put(filename, file, {
-      access: 'public',
-      addRandomSuffix: false,
-    });
+    let url: string;
 
-    // Return the blob URL
+    if (isProduction) {
+      // Production: Upload to Vercel Blob
+      console.log('[Upload] Using Vercel Blob storage (production)');
+      const blob = await put(filename, file, {
+        access: 'public',
+        addRandomSuffix: false,
+      });
+      url = blob.url;
+    } else {
+      // Local development: Save to filesystem
+      console.log('[Upload] Using local filesystem (development)');
+      const photosDir = path.join(process.cwd(), 'public', 'photos');
+      await mkdir(photosDir, { recursive: true });
+
+      const filepath = path.join(photosDir, filename);
+      const buffer = Buffer.from(await file.arrayBuffer());
+      await writeFile(filepath, buffer);
+
+      url = `/photos/${filename}`;
+    }
+
+    // Return the URL
     return NextResponse.json({
       success: true,
-      url: blob.url,
+      url,
       filename,
       slot: {
         kind: 'image',
-        src: blob.url,
+        src: url,
         fit: 'cover',
       },
     });

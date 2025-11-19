@@ -17,7 +17,11 @@ export default function LightTableApp({ isAdmin = false }: LightTableAppProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const {
-    slot,
+    slots,
+    currentSlotIndex,
+    addSlot,
+    nextSlot,
+    prevSlot,
     setSlotContent,
     setBackText,
     loupeEnabled,
@@ -25,7 +29,20 @@ export default function LightTableApp({ isAdmin = false }: LightTableAppProps) {
     isFlipped,
     toggleFlip,
     loadFromStorage,
+    updateSlotPosition,
   } = useLightTableStore();
+
+  // Compute current slot from slots array (don't use store getter - it breaks reactivity)
+  const slot = slots[currentSlotIndex] || {
+    id: 'default',
+    x: 0,
+    y: 0,
+    width: 520,
+    height: 420,
+    rotation: 0,
+    scale: 1,
+    content: undefined,
+  };
 
   const [isEditingBack, setIsEditingBack] = useState(false);
   const [editText, setEditText] = useState('');
@@ -242,15 +259,19 @@ export default function LightTableApp({ isAdmin = false }: LightTableAppProps) {
         }
         // Non-admin: clicking frame does nothing (read-only, use double-click to flip)
       },
+      onSlotPositionChange: (index, x, y) => {
+        // Update slot position in store when user drags a frame
+        updateSlotPosition(index, x, y);
+      },
       safeInsets: { top: 84, left: 12, right: 12, bottom: 56 },
     });
     engineRef.current = engine;
 
     (async () => {
       await engine.init(container);
-      // Get the current slot from store instead of using closure
-      const currentSlot = useLightTableStore.getState().slot;
-      await engine.setSlot(currentSlot);
+      // Get the current slots from store instead of using closure
+      const currentState = useLightTableStore.getState();
+      await engine.setSlots(currentState.slots, currentState.currentSlotIndex);
       container.style.display = 'block';
 
       // REMOVED: Auto-load behavior that was causing unwanted photo cycling
@@ -266,7 +287,8 @@ export default function LightTableApp({ isAdmin = false }: LightTableAppProps) {
       const targetCanvas = container.firstChild as HTMLElement | null;
 
       const onDown = (ev: PointerEvent) => {
-        if (ev.target === targetCanvas && !isEditingBack) {
+        // Don't start world panning if we're editing or if a frame is being dragged
+        if (ev.target === targetCanvas && !isEditingBack && !engine.getIsDraggingFrame()) {
           draggingWorld = true;
           sx = ev.clientX;
           sy = ev.clientY;
@@ -275,6 +297,12 @@ export default function LightTableApp({ isAdmin = false }: LightTableAppProps) {
       };
 
       const onMove = (ev: PointerEvent) => {
+        // Stop world dragging if a frame starts being dragged
+        if (engine.getIsDraggingFrame() && draggingWorld) {
+          draggingWorld = false;
+          (container.style as any).cursor = 'default';
+        }
+
         if (draggingWorld) {
           engine.pan(ev.clientX - sx, ev.clientY - sy);
           sx = ev.clientX;
@@ -316,18 +344,20 @@ export default function LightTableApp({ isAdmin = false }: LightTableAppProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // keep engine in sync with store
-  const slotContentKey =
-    slot?.content?.kind === 'image'
-      ? `img:${slot.content.src}|${slot.content.fit ?? ''}`
-      : slot?.content?.kind === 'text'
-      ? `txt:${slot.content.text}`
+  // keep engine in sync with store - render all slots simultaneously
+  const slotsKey = slots.map((s, i) => {
+    const contentKey = s?.content?.kind === 'image'
+      ? `img:${s.content.src}|${s.content.fit ?? ''}`
+      : s?.content?.kind === 'text'
+      ? `txt:${s.content.text}`
       : 'none';
+    return `${i}:${s.x},${s.y},${s.width},${s.height},${contentKey},${s.backText || ''}`;
+  }).join('|');
 
   useEffect(() => {
-    engineRef.current?.setSlot(slot);
+    engineRef.current?.setSlots(slots, currentSlotIndex);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slot.x, slot.y, slot.width, slot.height, slotContentKey, slot.backText]);
+  }, [currentSlotIndex, slotsKey]);
 
   useEffect(() => {
     engineRef.current?.setLoupeEnabled(loupeEnabled);
@@ -342,14 +372,24 @@ export default function LightTableApp({ isAdmin = false }: LightTableAppProps) {
   };
 
   const handleSaveBackText = async () => {
-    setBackText(editText);
+    // Check if we're editing a newspaper clipping or a Polaroid back
+    const isEditingClipping = slot.content?.kind === 'text';
+
+    if (isEditingClipping) {
+      // Update the slot content text directly for newspaper clippings
+      setSlotContent({ kind: 'text', text: editText });
+    } else {
+      // Update back text for Polaroid photos
+      setBackText(editText);
+    }
+
     setIsEditingBack(false);
 
     // Wait a tick for state to update, then force engine re-render
     await new Promise(resolve => setTimeout(resolve, 50));
     const currentState = useLightTableStore.getState();
-    if (engineRef.current && currentState.isFlipped) {
-      await engineRef.current.setSlot(currentState.slot);
+    if (engineRef.current) {
+      await engineRef.current.setSlots(currentState.slots, currentState.currentSlotIndex);
     }
   };
 
@@ -567,6 +607,50 @@ export default function LightTableApp({ isAdmin = false }: LightTableAppProps) {
           </button>
         )}
 
+        {/* 1b. Add Text Clipping (Admin only) */}
+        {isAdmin && (
+          <button
+            className="toolbar-btn"
+            onClick={() => {
+              const defaultText = 'Click to edit...';
+              addSlot({ kind: 'text', text: defaultText });
+              setIsEditingBack(true);
+              setEditText(defaultText);
+            }}
+            title="Add newspaper clipping text"
+          >
+            📰 Add Clipping
+          </button>
+        )}
+
+        {/* 1c. Slot Navigation (Admin only, shown when multiple slots) */}
+        {isAdmin && slots.length > 1 && (
+          <>
+            <button
+              className="toolbar-btn"
+              onClick={prevSlot}
+              title="Previous item"
+            >
+              ← Prev
+            </button>
+            <span style={{
+              padding: '6px 12px',
+              fontSize: 13,
+              color: '#5a5a5a',
+              fontWeight: 500,
+            }}>
+              {currentSlotIndex + 1} / {slots.length}
+            </span>
+            <button
+              className="toolbar-btn"
+              onClick={nextSlot}
+              title="Next item"
+            >
+              Next →
+            </button>
+          </>
+        )}
+
         {/* 2. Toggle Loupe */}
         <button
           className="toolbar-btn"
@@ -577,12 +661,16 @@ export default function LightTableApp({ isAdmin = false }: LightTableAppProps) {
           {loupeEnabled ? '🔍 Loupe ON' : '🔍 Loupe'}
         </button>
 
-        {/* 3. Flip Photo */}
+        {/* 3. Flip Photo (disabled for newspaper clippings) */}
         <button
           className="toolbar-btn"
           onClick={toggleFlip}
-          title="Flip photo to see/edit back"
-          style={{ background: isFlipped ? 'rgba(255, 220, 180, 0.3)' : undefined }}
+          title={slot.content?.kind === 'text' ? 'Newspaper clippings don\'t flip' : 'Flip photo to see/edit back'}
+          disabled={slot.content?.kind === 'text'}
+          style={{
+            background: isFlipped ? 'rgba(255, 220, 180, 0.3)' : undefined,
+            opacity: slot.content?.kind === 'text' ? 0.5 : 1
+          }}
         >
           {isFlipped ? '🔄 Show Front' : '🔄 Flip Over'}
         </button>
@@ -636,7 +724,7 @@ export default function LightTableApp({ isAdmin = false }: LightTableAppProps) {
             fontSize: 18,
             color: '#2a2a2a',
           }}>
-            ✍️ Edit Back of Photo
+            {slot.content?.kind === 'text' ? '📰 Edit Newspaper Clipping' : '✍️ Edit Back of Photo'}
           </h3>
           <textarea
             autoFocus

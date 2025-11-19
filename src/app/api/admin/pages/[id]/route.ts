@@ -33,7 +33,7 @@ export async function PUT(
       );
     }
 
-    const page = await updatePage(id, title, slug, slotData as Slot);
+    const page = await updatePage(id, title, slug, slotData as Slot[]);
     return NextResponse.json({ page });
   } catch (error: any) {
     if (error.message === 'Unauthorized') {

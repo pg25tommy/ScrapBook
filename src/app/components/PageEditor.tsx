@@ -18,8 +18,8 @@ export default function PageEditor({ mode, initialPage }: PageEditorProps) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  // Get current slot state from store
-  const { slot } = useLightTableStore();
+  // Get all slots from store (for multi-slot pages)
+  const { slots } = useLightTableStore();
 
   const handleSave = async () => {
     setError('');
@@ -52,7 +52,7 @@ export default function PageEditor({ mode, initialPage }: PageEditorProps) {
           body: JSON.stringify({
             title,
             slug,
-            slotData: slot,
+            slotData: slots,  // Send all slots
           }),
         });
 
@@ -71,7 +71,7 @@ export default function PageEditor({ mode, initialPage }: PageEditorProps) {
           body: JSON.stringify({
             title,
             slug,
-            slotData: slot,
+            slotData: slots,  // Send all slots
           }),
         });
 

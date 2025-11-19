@@ -61,16 +61,28 @@ function loadSlotFromStorage(): Slot | null {
 /* ---------------- Store ---------------- */
 
 type LTState = {
-  // Single Polaroid frame state
-  slot: Slot;
+  // Multiple slots on the page
+  slots: Slot[];
+  currentSlotIndex: number;
   loupeEnabled: boolean;
   isFlipped: boolean;
+
+  // Computed: current slot (for backward compatibility)
+  slot: Slot;
+
+  /* Slot management */
+  addSlot: (content?: SlotContent) => void;
+  removeCurrentSlot: () => void;
+  setCurrentSlot: (index: number) => void;
+  nextSlot: () => void;
+  prevSlot: () => void;
 
   /* Photo frame controls */
   setSlotContent: (content: SlotContent | undefined) => void;
   setBackText: (text: string) => void;
   resizeSlot: (w: number, h: number) => void;
   resetSlot: () => void;
+  updateSlotPosition: (index: number, x: number, y: number) => void;
 
   /* Camera controls */
   toggleLoupe: () => void;
@@ -80,38 +92,141 @@ type LTState = {
   loadFromStorage: () => void;
 };
 
-export const useLightTableStore = create<LTState>((set) => ({
-  /* single polaroid frame */
-  slot: ONE_SLOT,
+export const useLightTableStore = create<LTState>((set, get) => ({
+  /* multiple slots */
+  slots: [ONE_SLOT],
+  currentSlotIndex: 0,
   loupeEnabled: false,
   isFlipped: false,
 
+  // Computed property for backward compatibility
+  get slot() {
+    return get().slots[get().currentSlotIndex] || ONE_SLOT;
+  },
+
+  /* slot management */
+  addSlot: (content) => {
+    set((state) => {
+      // Position new slots with larger offset so they don't overlap
+      const offset = state.slots.length * 150;
+      const newSlot: Slot = {
+        id: uid(),
+        x: offset,
+        y: offset,
+        width: 520,
+        height: 420,
+        rotation: 0,
+        scale: 1,
+        content,
+      };
+      const newSlots = [...state.slots, newSlot];
+      saveSlotToStorage(newSlot); // Save the new slot
+      return {
+        slots: newSlots,
+        currentSlotIndex: newSlots.length - 1, // Switch to the new slot
+        isFlipped: false,
+      };
+    });
+  },
+
+  removeCurrentSlot: () => {
+    set((state) => {
+      if (state.slots.length <= 1) return {}; // Keep at least one slot
+      const newSlots = state.slots.filter((_, i) => i !== state.currentSlotIndex);
+      const newIndex = Math.min(state.currentSlotIndex, newSlots.length - 1);
+      saveSlotToStorage(newSlots[newIndex]);
+      return {
+        slots: newSlots,
+        currentSlotIndex: newIndex,
+        isFlipped: false,
+      };
+    });
+  },
+
+  setCurrentSlot: (index) => {
+    set((state) => {
+      if (index >= 0 && index < state.slots.length) {
+        return {
+          currentSlotIndex: index,
+          isFlipped: false,
+        };
+      }
+      return {};
+    });
+  },
+
+  nextSlot: () => {
+    set((state) => ({
+      currentSlotIndex: (state.currentSlotIndex + 1) % state.slots.length,
+      isFlipped: false,
+    }));
+  },
+
+  prevSlot: () => {
+    set((state) => ({
+      currentSlotIndex: (state.currentSlotIndex - 1 + state.slots.length) % state.slots.length,
+      isFlipped: false,
+    }));
+  },
+
   /* photo frame */
   setSlotContent: (content) => {
-    set(({ slot }) => {
-      const newSlot = { ...slot, content };
-      saveSlotToStorage(newSlot);
-      return { slot: newSlot };
+    set((state) => {
+      const newSlots = [...state.slots];
+      newSlots[state.currentSlotIndex] = {
+        ...newSlots[state.currentSlotIndex],
+        content,
+      };
+      saveSlotToStorage(newSlots[state.currentSlotIndex]);
+      return { slots: newSlots };
     });
   },
 
   setBackText: (text) => {
-    set(({ slot }) => {
-      const newSlot = { ...slot, backText: text };
-      saveSlotToStorage(newSlot);
-      return { slot: newSlot };
+    set((state) => {
+      const newSlots = [...state.slots];
+      newSlots[state.currentSlotIndex] = {
+        ...newSlots[state.currentSlotIndex],
+        backText: text,
+      };
+      saveSlotToStorage(newSlots[state.currentSlotIndex]);
+      return { slots: newSlots };
     });
   },
 
-  resizeSlot: (w, h) =>
-    set(({ slot }) => ({ slot: { ...slot, width: w, height: h } })),
+  resizeSlot: (w, h) => {
+    set((state) => {
+      const newSlots = [...state.slots];
+      newSlots[state.currentSlotIndex] = {
+        ...newSlots[state.currentSlotIndex],
+        width: w,
+        height: h,
+      };
+      return { slots: newSlots };
+    });
+  },
 
   resetSlot: () => {
-    const newSlot = { ...ONE_SLOT, id: uid() };
-    saveSlotToStorage(newSlot);
-    set({
-      slot: newSlot,
-      isFlipped: false,
+    set((state) => {
+      const newSlots = [...state.slots];
+      newSlots[state.currentSlotIndex] = { ...ONE_SLOT, id: uid() };
+      saveSlotToStorage(newSlots[state.currentSlotIndex]);
+      return {
+        slots: newSlots,
+        isFlipped: false,
+      };
+    });
+  },
+
+  updateSlotPosition: (index, x, y) => {
+    set((state) => {
+      const newSlots = [...state.slots];
+      newSlots[index] = {
+        ...newSlots[index],
+        x,
+        y,
+      };
+      return { slots: newSlots };
     });
   },
 
@@ -123,7 +238,7 @@ export const useLightTableStore = create<LTState>((set) => ({
   loadFromStorage: () => {
     const savedSlot = loadSlotFromStorage();
     if (savedSlot) {
-      set({ slot: savedSlot });
+      set({ slots: [savedSlot], currentSlotIndex: 0 });
     }
   },
 }));

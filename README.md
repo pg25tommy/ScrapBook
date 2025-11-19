@@ -1,15 +1,18 @@
-# Light Table — Scrapbook Web App
+# SoftBound by Daniel — Scrapbook Web App
 
-**Version:** 0.5.1
+**Version:** 0.6.0
 **Owner:** Tommy Minter
+**Branding:** SoftBound by Daniel
 **Status:** Active
 
 ## Overview
 
-Light Table is a tactile, analog-feeling scrapbook web app that displays Polaroid-style images on a warm paper background. The aesthetic is physical and intimate: matte textures, soft shadows, tape overlays, and gentle light-table vibes.
+SoftBound by Daniel is a tactile, analog-feeling scrapbook web app that displays Polaroid-style images and newspaper clippings on a warm paper background. The aesthetic is physical and intimate: matte textures, soft shadows, tape overlays, and gentle light-table vibes.
+
+**NEW in v0.6.0:** Multi-slot pages! Create rich scrapbook pages with multiple photos and newspaper clippings positioned freely on the same page.
 
 The app features a complete **admin/public architecture**:
-- **Admin Dashboard** (`/admin`): Full CRUD operations for scrapbook pages with authentication
+- **Admin Dashboard** (`/admin`): Full CRUD operations for multi-slot scrapbook pages with authentication
 - **Public Gallery** (`/`): Beautiful read-only view of published pages for end users
 
 ---

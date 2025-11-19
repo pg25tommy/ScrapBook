@@ -12,17 +12,18 @@ type PublicPageViewProps = {
 
 export default function PublicPageView({ page }: PublicPageViewProps) {
   const router = useRouter();
-  const { setSlotContent, setBackText } = useLightTableStore();
 
-  // Load the page data into the store on mount
+  // Load all slots from the page data into the store on mount
   useEffect(() => {
-    if (page.slot_data.content) {
-      setSlotContent(page.slot_data.content);
+    if (page.slot_data && Array.isArray(page.slot_data)) {
+      // Set the entire slots array
+      useLightTableStore.setState({
+        slots: page.slot_data,
+        currentSlotIndex: 0,
+        isFlipped: false
+      });
     }
-    if (page.slot_data.backText) {
-      setBackText(page.slot_data.backText);
-    }
-  }, [page, setSlotContent, setBackText]);
+  }, [page]);
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100vh', background: '#f5f1e8' }}>

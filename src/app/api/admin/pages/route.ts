@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const page = await createPage(title, slug, slotData as Slot);
+    const page = await createPage(title, slug, slotData as Slot[]);
     return NextResponse.json({ page }, { status: 201 });
   } catch (error: any) {
     if (error.message === 'Unauthorized') {

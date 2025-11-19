@@ -6,6 +6,200 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.6.0] - 2025-11-19
+
+### Added - Multi-Slot Pages & Branding Update
+
+#### Multi-Slot Architecture
+**What:** Support for multiple items (photos and newspaper clippings) on a single scrapbook page
+**Why:** Users wanted to create richer scrapbook pages with multiple photos and clippings together
+
+- **Multiple Slots Per Page**
+  - Changed database schema from single `Slot` to `Slot[]` array
+  - Each page can now contain unlimited photos and newspaper clippings
+  - Slots are independently draggable and positioned
+  - All slots save and load correctly from database
+  - **Why**: Mimics real scrapbook pages with multiple items
+
+- **Individual Slot Positioning**
+  - Each slot maintains independent x/y coordinates
+  - Drag any item to reposition without affecting others
+  - Position updates saved to database automatically
+  - **Why**: Full creative control over page layout
+
+- **Database Migration**
+  - `ScrapbookPage.slot_data` changed from `Slot` to `Slot[]`
+  - `createPage()` and `updatePage()` accept slot arrays
+  - In-memory storage and Postgres both support multi-slot
+  - **Why**: Foundation for complex scrapbook layouts
+
+#### Branding Update
+**What:** Rebranded application from "Light Table Scrapbook" to "SoftBound by Daniel"
+**Why:** Client requested personalized branding
+
+- **Updated Application Title**
+  - Browser tab title: "SoftBound by Daniel"
+  - Login page subtitle: "SoftBound by Daniel"
+  - Public gallery heading: "SoftBound by Daniel"
+  - Meta description updated
+  - **Why**: Professional branding aligned with client identity
+
+- **Files Updated**
+  - `src/app/layout.tsx` - Page metadata
+  - `src/app/components/PublicGallery.tsx` - Gallery header
+  - `src/app/admin/login/page.tsx` - Login page branding
+  - **Why**: Consistent branding across entire application
+
+### Fixed - Multi-Slot Rendering Issues
+
+#### Flip Animation Multi-Slot Bug
+**What:** Fixed newspaper clippings disappearing when flipping photos
+**Why:** Flip animation was clearing all slots and only re-rendering the current one
+
+- **Problem**:
+  - `setSlot()` calls `world.removeChildren()`, deleting all items
+  - Flip animation called `setSlot(currentSlot)`, losing other slots
+  - Newspaper clippings vanished during photo flip
+
+- **Solution**:
+  - Changed flip animation to call `setSlots(currentSlots, selectedIndex)`
+  - Re-renders ALL slots during flip, not just current one
+  - All items remain visible throughout flip transition
+  - **Why**: Maintains multi-slot page integrity during animations
+
+- **Code Changes**:
+  - `src/lib/pixi/engine.ts` line 338: Use `setSlots()` instead of `setSlot()`
+  - **Impact**: All slots stay visible when flipping photos
+
+#### Newspaper Clipping Flip Exclusion
+**What:** Prevented newspaper clippings from flipping with photos
+**Why:** Newspaper clippings are single-sided and shouldn't flip
+
+- **Problem**:
+  - Flip animation applied scale transformation to ALL world children
+  - Newspaper clippings were flipping along with photos
+  - Unrealistic behavior for single-sided content
+
+- **Solution**:
+  - Mark frame containers with `isNewspaperClipping` property
+  - Skip flip transformation for newspaper clipping containers
+  - Only photos participate in flip animation
+  - **Why**: Newspaper clippings stay stationary and readable
+
+- **Code Changes**:
+  - `src/lib/pixi/engine.ts` line 372: Mark containers with type
+  - `src/lib/pixi/engine.ts` lines 346, 358: Skip clippings in flip
+  - **Impact**: Realistic behavior - only photos flip
+
+### Security Improvements
+
+#### Login Page Cleanup
+**What:** Removed default credentials display from login page
+**Why:** Security best practice - don't display credentials in production UI
+
+- **Removed Default Credentials Text**
+  - Deleted "Default credentials: admin / admin123" from login page
+  - Cleaner, more professional login interface
+  - Credentials only in documentation, not UI
+  - **Why**: Prevent credential exposure in production deployments
+
+- **Code Changes**:
+  - `src/app/admin/login/page.tsx` lines 193-202: Removed credential hint
+  - **Impact**: More secure production deployment
+
+### Technical Improvements
+
+#### Multi-Slot API Updates
+**What:** Updated all API routes to handle slot arrays
+**Why:** Support for multi-slot database schema
+
+- **API Route Changes**:
+  - `POST /api/admin/pages`: Accept `slotData: Slot[]`
+  - `PUT /api/admin/pages/[id]`: Accept `slotData: Slot[]`
+  - Type casting updated to `as Slot[]` throughout
+  - **Why**: Full API support for multi-slot pages
+
+- **Frontend Changes**:
+  - `PageEditor.tsx`: Send `slots` array instead of single `slot`
+  - `PublicPageView.tsx`: Load entire slots array into store
+  - **Why**: Complete data flow for multi-slot architecture
+
+#### State Management Updates
+**What:** Enhanced Zustand store to manage multiple slots
+**Why:** Application state needed to support slot arrays
+
+- **Store Enhancements**:
+  - `useLightTableStore.ts`: Full multi-slot state management
+  - `updateSlotPosition()`: Track individual slot positions
+  - `setSlots()`: Initialize with slot array
+  - **Why**: Foundation for multi-slot UI and persistence
+
+### Bug Fixes
+
+**Multi-Slot Display on Public Pages**
+- **Problem**: Published pages with multiple slots showed wrong content
+- **Root Cause**: State loading issues with slot arrays
+- **Solution**: Fixed `PublicPageView` to properly load slot arrays
+- **Impact**: Public pages correctly display all photos and clippings
+
+**Infinite Loop in PublicPageView**
+- **Problem**: Console error "Maximum update depth exceeded"
+- **Root Cause**: Zustand selector creating infinite re-renders
+- **Solution**: Removed problematic `setSlots` selector, direct setState call
+- **Impact**: Smooth page loading without performance issues
+
+**Port Configuration Mismatch**
+- **Problem**: Login failures due to NEXTAUTH_URL port mismatch
+- **Root Cause**: `.env.local` set to port 3001, server on port 3000
+- **Solution**: Killed blocking process, updated to correct port
+- **Impact**: Authentication works reliably on localhost:3000
+
+### Files Modified
+
+**Core Application**:
+- `src/lib/db.ts` - Multi-slot database schema
+- `src/lib/pixi/engine.ts` - Flip animation fixes
+- `src/state/useLightTableStore.ts` - Multi-slot state management
+
+**API Routes**:
+- `src/app/api/admin/pages/route.ts` - Create page with slots
+- `src/app/api/admin/pages/[id]/route.ts` - Update page with slots
+
+**Components**:
+- `src/app/components/PageEditor.tsx` - Send slot arrays
+- `src/app/components/PublicPageView.tsx` - Load slot arrays
+- `src/app/components/LightTableApp.tsx` - Multi-slot rendering
+- `src/app/components/PublicGallery.tsx` - Branding update
+- `src/app/admin/login/page.tsx` - Remove credentials, branding
+
+**Configuration**:
+- `src/app/layout.tsx` - Application branding
+- `.gitignore` - Photo directory management
+
+### Migration Notes
+
+#### Database Schema Change
+**Breaking Change**: `ScrapbookPage.slot_data` is now an array
+
+**Before**:
+```typescript
+slot_data: Slot  // Single slot
+```
+
+**After**:
+```typescript
+slot_data: Slot[]  // Array of slots
+```
+
+**Migration Steps**:
+1. Existing in-memory data will need manual conversion
+2. For Postgres: Run migration to convert `slot_data` to arrays
+3. Legacy single-slot pages: Wrap slot in array `[slot]`
+
+**Backwards Compatibility**: None - this is a breaking schema change
+
+---
+
 ## [0.5.1] - 2025-11-18
 
 ### Added - Enhanced Navigation & Photo Management

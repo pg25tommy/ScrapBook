@@ -78,7 +78,7 @@ function LoginForm() {
             textAlign: 'center',
           }}
         >
-          Light Table Scrapbook
+          SoftBound by Daniel
         </p>
 
         <form onSubmit={handleSubmit}>
@@ -189,17 +189,6 @@ function LoginForm() {
             {loading ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
-
-        <p
-          style={{
-            marginTop: 24,
-            fontSize: 13,
-            color: '#999',
-            textAlign: 'center',
-          }}
-        >
-          Default credentials: admin / admin123
-        </p>
       </div>
     </div>
   );

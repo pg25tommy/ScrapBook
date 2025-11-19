@@ -39,7 +39,7 @@ export default function PublicGallery({ pages }: PublicGalleryProps) {
               marginBottom: 16,
             }}
           >
-            No Scrapbook Pages Yet
+            No Pages Yet
           </h1>
           <p style={{ fontSize: 18, color: '#666', lineHeight: 1.6 }}>
             Check back soon for beautiful memories and stories.
@@ -85,7 +85,7 @@ export default function PublicGallery({ pages }: PublicGalleryProps) {
             textAlign: 'center',
           }}
         >
-          Scrapbook Gallery
+          SoftBound by Daniel
         </h1>
         <p
           style={{
@@ -95,7 +95,7 @@ export default function PublicGallery({ pages }: PublicGalleryProps) {
             textAlign: 'center',
           }}
         >
-          Browse through our collection of memories
+          Browse through the collection
         </p>
 
         <div
