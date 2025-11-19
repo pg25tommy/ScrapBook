@@ -192,3 +192,63 @@ body {
     padding: 6px 8px;
   }
 }
+
+/* Hamburger Menu - Mobile/Desktop Behavior */
+@media (max-width: 768px) {
+  /* Show hamburger button on mobile */
+  .hamburger-menu-btn {
+    display: flex !important;
+  }
+
+  /* Show overlay when menu is open */
+  .mobile-menu-overlay {
+    display: block !important;
+  }
+
+  /* Toolbar as slide-out drawer on mobile */
+  .toolbar-container {
+    top: 0 !important;
+    left: auto !important;
+    right: 0 !important;
+    transform: translateX(100%) !important; /* Hidden off-screen by default */
+    max-width: min(320px, 80vw) !important;
+    height: 100vh;
+    flex-direction: column !important;
+    justify-content: flex-start !important;
+    padding: 80px 16px 16px 16px;
+    background: rgba(255, 253, 248, 0.98);
+    border-left: 1px solid rgba(208, 192, 160, 0.5);
+    box-shadow: -4px 0 16px rgba(0, 0, 0, 0.15);
+    overflow-y: auto;
+    gap: 8px !important;
+  }
+
+  /* Slide in when menu is open */
+  .toolbar-container.mobile-menu-open {
+    transform: translateX(0) !important;
+  }
+
+  /* Make toolbar buttons full width on mobile */
+  .toolbar-container .toolbar-btn {
+    width: 100%;
+    justify-content: flex-start;
+    text-align: left;
+  }
+
+  /* Stack archive dropdown, slot counter vertically */
+  .toolbar-container .archive-dropdown-container,
+  .toolbar-container > span {
+    width: 100%;
+  }
+}
+
+/* Desktop - hide hamburger, show toolbar normally */
+@media (min-width: 769px) {
+  .hamburger-menu-btn {
+    display: none !important;
+  }
+
+  .mobile-menu-overlay {
+    display: none !important;
+  }
+}

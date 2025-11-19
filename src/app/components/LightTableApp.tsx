@@ -49,6 +49,9 @@ export default function LightTableApp({ isAdmin = false }: LightTableAppProps) {
   const [uploading, setUploading] = useState(false);
   const isOpeningEditor = useRef(false);
 
+  // Mobile menu state
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
   // Photo archive state
   type PhotoInfo = {
     filename: string;
@@ -406,21 +409,71 @@ export default function LightTableApp({ isAdmin = false }: LightTableAppProps) {
         style={{ display: 'none' }}
       />
 
-      {/* Toolbar */}
+      {/* Hamburger Menu Button (Mobile Only) */}
+      <button
+        className="hamburger-menu-btn"
+        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        title="Toggle menu"
+        style={{
+          position: 'fixed',
+          top: isAdmin ? 76 : 20,
+          right: 20,
+          zIndex: 3000,
+          width: 48,
+          height: 48,
+          display: 'none', // Hidden by default, shown on mobile via media query
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: 'rgba(255, 253, 248, 0.98)',
+          border: '1px solid rgba(208, 192, 160, 0.5)',
+          borderRadius: 8,
+          cursor: 'pointer',
+          boxShadow: '0 2px 8px rgba(107, 93, 79, 0.15)',
+          fontSize: 24,
+          padding: 0,
+        }}
+      >
+        {isMobileMenuOpen ? '✕' : '☰'}
+      </button>
+
+      {/* Mobile Menu Overlay (when open) */}
+      {isMobileMenuOpen && (
+        <div
+          onClick={() => {
+            setIsMobileMenuOpen(false);
+            setShowArchiveDropdown(false); // Also close archive dropdown
+          }}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.3)',
+            zIndex: 2900,
+            display: 'none', // Hidden by default, shown on mobile via media query
+          }}
+          className="mobile-menu-overlay"
+        />
+      )}
+
+      {/* Toolbar - Desktop: always visible, Mobile: slide-out drawer */}
       <div
-        className="toolbar-fixed"
+        className={`toolbar-container ${isMobileMenuOpen ? 'mobile-menu-open' : ''}`}
         style={{
           position: 'fixed',
           top: isAdmin ? 68 : 12,
           left: '50%',
           transform: 'translateX(-50%) translateZ(0)',
-          zIndex: 2100,
+          zIndex: 2950,
           display: 'flex',
           flexWrap: 'wrap',
           gap: 'clamp(4px, 1vw, 8px)',
           willChange: 'transform',
           maxWidth: 'calc(100vw - 24px)',
           justifyContent: 'center',
+          // Mobile drawer styles (overridden on desktop)
+          transition: 'transform 250ms ease-out',
         }}
       >
         {/* Upload Image (Admin only) */}
