@@ -112,6 +112,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 **Why this matters**: Mobile traffic often exceeds 50% for content sites
 
+### Bug Fixes
+
+**Default Page Shows Empty Polaroid Instead of Newspaper Clipping**
+- **Problem**: Creating a new page showed a saved newspaper clipping from localStorage instead of an empty Polaroid frame
+- **Root Cause**: Store loaded saved state from localStorage on every page load
+- **Solution**: Added `resetStore()` function that clears localStorage and resets to default state; called automatically when creating new pages
+- **Impact**: New pages always start with a clean empty Polaroid frame with "+" icon
+- **Files**: `src/state/useLightTableStore.ts`, `src/app/components/PageEditor.tsx`
+
+**Toolbar Covering Page Title on Public Pages**
+- **Problem**: Toolbar buttons overlapped the page title on published pages
+- **Root Cause**: Toolbar positioned at `top: 12px` conflicted with PublicPageView header at top
+- **Solution**: Adjusted toolbar to `top: 76px` on public pages, updated safe insets to `136px`, positioned hamburger menu below header
+- **Impact**: Page title fully visible with toolbar positioned below it
+- **Files**: `src/app/components/LightTableApp.tsx`
+
+**Newspaper Clipping Edit Not Working**
+- **Problem**: Double-clicking a newspaper clipping to edit opened the wrong clipping's text
+- **Root Cause**: `onRequestFill` callback used currently selected slot instead of clicked slot
+- **Solution**: Updated callback to accept `slotIndex` parameter and pass it from PixiJS engine; now edits the correct clicked slot
+- **Impact**: Double-clicking any newspaper clipping correctly opens its text for editing
+- **Files**: `src/lib/pixi/engine.ts`, `src/app/components/LightTableApp.tsx`
+
 ---
 
 ## [0.6.0] - 2025-11-19
